@@ -27,12 +27,13 @@ This repository contains documentation and code related to the extraction of tri
 
 ## Programming
 
-How to read tables from Wikipedia/HTML
+How to parse tables from Wikipedia/HTML
 
 - https://stackoverflow.com/questions/38763293/how-to-get-table-data-from-wikipedia-page
-- https://roche.io/2016/05/scrape-wikipedia-with-python
+- https://roche.io/2016/05/scrape-wikipedia-with-python and associated source code at https://github.com/rocheio/wiki-table-scrape/blob/master/wikitablescrape.py
 - https://github.com/bcicen/wikitables
 - https://gist.github.com/wassname/5b10774dfcd61cdd3f28
+- http://srome.github.io/Parsing-HTML-Tables-in-Python-with-BeautifulSoup-and-pandas/
 
 Clustering of tables
 
