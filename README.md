@@ -34,6 +34,7 @@ How to parse tables from Wikipedia/HTML
 - https://github.com/bcicen/wikitables
 - https://gist.github.com/wassname/5b10774dfcd61cdd3f28
 - http://srome.github.io/Parsing-HTML-Tables-in-Python-with-BeautifulSoup-and-pandas/
+- https://qxf2.com/blog/web-scraping-using-python/
 
 Clustering of tables
 
