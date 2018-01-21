@@ -23,6 +23,8 @@ This repository contains documentation and code related to the extraction of tri
   http://www.vldb.org/pvldb/vol4/p528-venetis.pdf
 - Applying WebTables in Practice
   https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/43806.pdf
+- Schema Integration of Web Tables (SIWeT)
+  http://icomet.iba-suk.edu.pk/iccms2017/files/43.pdf
 
 
 ## Programming
