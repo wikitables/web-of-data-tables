@@ -25,6 +25,10 @@ This repository contains documentation and code related to the extraction of tri
   https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/43806.pdf
 - Schema Integration of Web Tables (SIWeT)
   http://icomet.iba-suk.edu.pk/iccms2017/files/43.pdf
+- Ad Hoc Table Retrieval using Semantic Similarity
+  https://arxiv.org/abs/1802.06159
+- TabVec: Table Vectors for Classification of Web Tables
+  https://arxiv.org/abs/1802.06290
 
 
 ## Programming
