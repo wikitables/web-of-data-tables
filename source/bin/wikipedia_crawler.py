@@ -227,6 +227,7 @@ class WikiParser():
 	
     def get_articles(self):
         skipped_redirect = 0
+        skipped_disambiguation = 0
         skipped_namespace = 0
         skipped_length = 0
         total_articles = 0
@@ -246,6 +247,9 @@ class WikiParser():
                 if not sections or sections[0][1].lstrip().lower().startswith("#redirect"):
                     skipped_redirect += 1
                     continue
+                if article_title.endsswith('(disambiguation)'):
+                    skipped_disambiguation += 1
+                    continue
                 # filter stubs (incomplete, very short articles)
                 if sum(len(body.strip()) for (_, body) in sections) < self.min_article_character:
                     skipped_length += 1
@@ -256,8 +260,8 @@ class WikiParser():
                 yield (article_title, sections)
 	
         logger.info(
-            "finished processing %i articles with %i sections (skipped %i redirects, %i stubs, %i ignored namespaces)",
-            total_articles, total_sections, skipped_redirect, skipped_length, skipped_namespace)
+            "finished processing %i articles with %i sections (skipped %i redirects, %i disambiguation, %i stubs, %i ignored namespaces)",
+            total_articles, total_sections, skipped_redirect, skipped_disambiguation, skipped_length, skipped_namespace)
         pool.terminate()
         self.nb_articles = total_articles
 
