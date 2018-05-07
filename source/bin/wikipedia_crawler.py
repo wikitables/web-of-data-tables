@@ -42,6 +42,22 @@ headers = {'Content-Type': 'text/html',
            'User-Agent': 'HTML Spider (emir@emunoz.org)',
            'Accept': 'text/html; charset=utf-8; profile="https://www.mediawiki.org/wiki/Specs/HTML/1.6.1"'}
 
+"""
+This script is made to crawl the Wikipedia APIs [1,2] and retrieve the HTML text as a (compressed) file 
+for all articles whose content is not for disambiguation or redirect.
+
+An example on how to use the API is:
+$ curl -X GET --header 'Accept: text/html; charset=utf-8; profile="https://www.mediawiki.org/wiki/Specs/HTML/1.6.1"' \
+'https://en.wikipedia.org/api/rest_v1/page/html/Isaac%20Alb%C3%A9niz'
+
+The script takes several parts from [3,4], where the goal is to parse the Wikipedia XML dump and extract sequences of words.
+
+[1] https://en.wikipedia.org/api/rest_v1/
+[2] https://www.mediawiki.org/wiki/RESTBase
+[3] https://github.com/RaRe-Technologies/gensim/blob/develop/gensim/scripts/segment_wiki.py
+[4] https://github.com/RaRe-Technologies/gensim/blob/develop/gensim/corpora/wikicorpus.py
+"""
+
 
 def parse_cli_arguments(argv):
     def formatter(prog):
@@ -65,6 +81,10 @@ def parse_cli_arguments(argv):
 
 class WikipediaSpider(object):
     """ Sets gentle spider that respects download limits of an API.
+    
+    Based on ratelimit [1] functions.
+    
+    [1] https://github.com/tomasbasham/ratelimit/blob/master/ratelimit/decorators.py
     """
     def __init__(self, calls=15, period=60, clock=None, raise_on_limit=True):
         self.clamped_calls = max(1, calls)
