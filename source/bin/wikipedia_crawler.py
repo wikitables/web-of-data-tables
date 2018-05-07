@@ -104,20 +104,22 @@ class WikipediaSpider(object):
     def download_article(self, article_title):
         api_url = '{0}page/html/{1}?redirect=false'.format(api_url_base, article_title)
         
-        period_remaining = self.__period_remaining()
-        # If the time window has elapsed then reset.
-        if period_remaining <= 0:
-            self.num_calls = 0
-            self.last_reset = self.clock()
+        with self.lock:
+            period_remaining = self.__period_remaining()
+            # If the time window has elapsed then reset.
+            if period_remaining <= 0:
+                self.num_calls = 0
+                self.last_reset = self.clock()
 
-        # Increase the number of attempts to call the function.
-        self.num_calls += 1
-        
-        # If the number of attempts to call the function exceeds the
-        # maximum then raise an exception.
-        if self.num_calls > self.clamped_calls:
-            logger.info('Sleeping for half a second')
-            time.sleep(0.5)
+            # Increase the number of attempts to call the function.
+            self.num_calls += 1
+            
+            # If the number of attempts to call the function exceeds the
+            # maximum then raise an exception.
+            if self.num_calls > self.clamped_calls:
+                logger.info('Sleeping for half a second')
+                time.sleep(0.5)
+                return
 
         response = requests.get(api_url, headers=headers)
 
@@ -133,11 +135,13 @@ class WikipediaSpider(object):
         
             # links stay relative https://stackoverflow.com/a/44002598
             # https://codereview.stackexchange.com/questions/100490/extracting-and-normalizing-urls-in-an-html-document
+            # http://www.compjour.org/warmups/govt-text-releases/extracting-absolute-wh-press-briefings-urls/
             # links = soup.find_all('a')
             # print(links)
 
             with bz2.BZ2File('./wikipedia_html/{0}.html.bz2'.format(article_title), mode='w') as bz2f:
-                bz2f.write(str.encode(str(soup)))
+                # bz2f.write(str.encode(str(soup)))
+                bz2f.write(str.encode(html_text))
             
         else:
             print('[!] HTTP {0} calling [{1}]'.format(response.status_code, api_url))
@@ -232,6 +236,7 @@ class WikiParser():
         skipped_length = 0
         total_articles = 0
         xml_pages = parse_xml_pages(self.wiki_dump)
+        # http://chriskiehl.com/article/parallelism-in-one-line/
         pool = multiprocessing.Pool(self.nb_jobs)
         
 	    # process the whole XML dump file in small chunks
@@ -247,7 +252,7 @@ class WikiParser():
                 if not sections or sections[0][1].lstrip().lower().startswith("#redirect"):
                     skipped_redirect += 1
                     continue
-                if article_title.endsswith('(disambiguation)'):
+                if article_title.endswith('(disambiguation)'):
                     skipped_disambiguation += 1
                     continue
                 # filter stubs (incomplete, very short articles)
@@ -277,7 +282,6 @@ def parse_all_articles(xml_dump_path, min_article_character, nb_jobs=None):
 def parse_articles(xml_dump_path, min_article_character=200, nb_jobs=None):
     article_stream = parse_all_articles(xml_dump_path, min_article_character, nb_jobs)
     max_count = 2
-    counter = 1
     
     # create a spider that respects the crawling rules
     now = time.monotonic if hasattr(time, 'monotonic') else time.time
@@ -286,11 +290,10 @@ def parse_articles(xml_dump_path, min_article_character=200, nb_jobs=None):
     for idx, article in enumerate(article_stream):
         article_title = article[0]
         # print('TITLE=',article_title)
-        html_text = spider.get_html(article_title)
+        spider.get_html(article_title)
         # print(html_text)
         
-        #counter += 1
-        #if counter > max_count:
+        #if idx > max_count:
         #    break
         
         if (idx + 1) % 1000 == 0:  # 100000
@@ -299,7 +302,7 @@ def parse_articles(xml_dump_path, min_article_character=200, nb_jobs=None):
 
 def main(argv):
     """
-    $ python parse_wiki_dump.py --file enwiki-20180401-pages-articles1.xml-p10p30302.bz2 --jobs 1
+    $ python parse_wiki_dump.py --file enwiki-20180420-pages-articles.xml.bz2 --jobs 1
     """
     # User parameters
     args = parse_cli_arguments(argv)
