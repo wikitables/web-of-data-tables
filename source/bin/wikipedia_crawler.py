@@ -16,7 +16,9 @@ from functools import partial
 from xml.etree import cElementTree
 
 import requests
+from requests.adapters import HTTPAdapter
 from smart_open import smart_open
+from urllib3.util.retry import Retry
 
 # from bs4 import BeautifulSoup
 
@@ -120,6 +122,10 @@ class WikipediaSpider(object):
         self.lock = threading.RLock()
         # Get a session to the service
         self.session = requests.Session()
+        retry = Retry(connect=3, backoff_factor=0.5)
+        adapter = HTTPAdapter(max_retries=retry)
+        self.session.mount('http://', adapter)
+        self.session.mount('https://', adapter)
         self.urls = None
         self.total_downloads = 0
 
@@ -127,7 +133,7 @@ class WikipediaSpider(object):
         self.urls = urls
 
     def get_all_html(self):
-        nb_cpus = multiprocessing.cpu_count() - 1
+        nb_cpus = multiprocessing.cpu_count()
         with futures.ThreadPoolExecutor(max_workers=nb_cpus) as executor:
             executor.map(self.download_article, self.urls)
 
@@ -431,7 +437,7 @@ def parse_all_articles(xml_dump, min_article_character, nb_jobs=None):
         parser_dump = WikiParser(dump, min_article_character, nb_jobs)
         wiki_articles_stream = parser_dump.get_articles()
         for article in wiki_articles_stream:
-            yield article
+            yield article[0]
 
 
 def parse_articles(xml_dump, output, min_article_character=200, nb_jobs=None):
@@ -458,6 +464,8 @@ def parse_articles(xml_dump, output, min_article_character=200, nb_jobs=None):
     now = time.monotonic if hasattr(time, 'monotonic') else time.time
     spider = WikipediaSpider(calls=199, period=1, clock=now, raise_on_limit=True,
                              output=output_path, sleep=2.5)
+    spider.set_urls(article_stream)
+    spider.get_all_html()
     # max_count = 2
     # for idx, article in enumerate(article_stream):
     #     article_title = article[0]
@@ -468,9 +476,6 @@ def parse_articles(xml_dump, output, min_article_character=200, nb_jobs=None):
     #     #    break
     #     if (idx + 1) % 100000 == 0:
     #         logger.info("processed #%d articles (at %r now)", idx + 1, article_title)
-
-    spider.set_urls(article_stream)
-    spider.get_all_html()
 
 
 def main(argv):
