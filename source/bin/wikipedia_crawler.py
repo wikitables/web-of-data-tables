@@ -150,7 +150,7 @@ class WikipediaSpider(object):
         thread.start()
 
     def download_article2(self, article_title):
-        print(article_title)
+        print(self.num_calls,article_title)
 
     def download_article(self, article_title):
         """ Method to query the API and retrieve the HTML text.
@@ -428,7 +428,7 @@ def parse_articles(xml_dump, output, min_article_character=200, nb_jobs=None):
     # max 200 requests per second
     now = time.monotonic if hasattr(time, 'monotonic') else time.time
     spider = WikipediaSpider(calls=200, period=1, clock=now, raise_on_limit=True,
-                             output=output_path, sleep=5.0)
+                             output=output_path, sleep=1.5)
     # max_count = 2
     for idx, article in enumerate(article_stream):
         article_title = article[0]
