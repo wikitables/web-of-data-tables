@@ -102,14 +102,17 @@ class WikipediaSpider(object):
         Whether to raise an error when reaching the limit or not. Default: True
     output : str
         Path to the output folder.
+    sleep : float
+        Time set to sleep when the limit is reached. It can be a float. Default: 1.0
     """
 
-    def __init__(self, calls=15, period=60, clock=None, raise_on_limit=True, output='.'):
+    def __init__(self, calls=15, period=60, clock=None, raise_on_limit=True, output='.', sleep=1.0):
         self.clamped_calls = max(1, calls)
         self.period = period
         self.clock = clock
         self.raise_on_limit = raise_on_limit
         self.output = output
+        self.sleep = sleep
         self.last_reset = clock()
         self.num_calls = 0
         # Add thread safety.
@@ -125,22 +128,6 @@ class WikipediaSpider(object):
         article_title : str
             Article title.
         """
-        thread = threading.Thread(target=self.download_article, args=(article_title,))
-        # thread.daemon = True
-        thread.start()
-
-    def download_article(self, article_title):
-        """ Method to query the API and retrieve the HTML text.
-
-        The HTML is then saved to disk compressed using bz2.
-
-        Parameters
-        ----------
-        article_title : str
-            Article title.
-        """
-        api_url = '{0}page/html/{1}?redirect=false'.format(api_url_base, article_title)
-
         with self.lock:
             period_remaining = self.__period_remaining()
             # If the time window has elapsed then reset.
@@ -154,13 +141,30 @@ class WikipediaSpider(object):
             # If the number of attempts to call the function exceeds the
             # maximum then sleep the thread for half a second.
             if self.num_calls > self.clamped_calls:
-                logger.info('Sleeping for half a second')
-                time.sleep(2)
+                logger.info('Sleeping for {} second(s)'.format(self.sleep))
+                time.sleep(self.sleep)
                 return
 
+        thread = threading.Thread(target=self.download_article2, args=(article_title,))
+        # thread.daemon = True
+        thread.start()
+
+    def download_article2(self, article_title):
+        print(article_title)
+
+    def download_article(self, article_title):
+        """ Method to query the API and retrieve the HTML text.
+
+        The HTML is then saved to disk compressed using bz2.
+
+        Parameters
+        ----------
+        article_title : str
+            Article title.
+        """
+        api_url = '{0}page/html/{1}?redirect=false'.format(api_url_base, article_title)
         # query the API
         response = requests.get(api_url, headers=headers)
-
         if response.status_code == 200:
             # return response.content.decode('utf-8')
             html_text = response.content.decode('utf-8')
@@ -180,7 +184,6 @@ class WikipediaSpider(object):
                 bz2f.write(str.encode(html_text))
         else:
             print('[!] HTTP {0} calling [{1}]'.format(response.status_code, api_url))
-            # return None
 
     def __period_remaining(self):
         """ Return the period remaining for the current rate limit window.
@@ -424,7 +427,8 @@ def parse_articles(xml_dump, output, min_article_character=200, nb_jobs=None):
     # create a spider that respects the crawling rules:
     # max 200 requests per second
     now = time.monotonic if hasattr(time, 'monotonic') else time.time
-    spider = WikipediaSpider(calls=200, period=1, clock=now, raise_on_limit=True, output=output_path)
+    spider = WikipediaSpider(calls=200, period=1, clock=now, raise_on_limit=True,
+                             output=output_path, sleep=5.0)
     # max_count = 2
     for idx, article in enumerate(article_stream):
         article_title = article[0]
