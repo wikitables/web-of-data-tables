@@ -149,7 +149,7 @@ class WikipediaSpider(object):
             thread = threading.Thread(target=self.download_article, args=(article_title,))
             # thread.daemon = True
             thread.start()
-            thread.join()
+            # thread.join()
         except (KeyboardInterrupt, SystemExit):
             logger.info('Received keyboard interrupt, quitting threads.')
             sys.exit()
@@ -194,6 +194,7 @@ class WikipediaSpider(object):
                 bz2f.write(str.encode(html_text))
         else:
             print('[!] HTTP {0} calling [{1}]'.format(response.status_code, api_url))
+        time.sleep(0.1)
 
     def __period_remaining(self):
         """ Return the period remaining for the current rate limit window.
