@@ -141,18 +141,19 @@ class WikipediaSpider(object):
             # If the number of attempts to call the function exceeds the
             # maximum then sleep the thread for half a second.
             if self.num_calls > self.clamped_calls:
-                logger.info('Sleeping for {} second(s)'.format(self.sleep))
-                time.sleep(self.sleep)
+                logger.info('Sleeping for {} second(s)'.format(period_remaining))
+                time.sleep(period_remaining)
                 return
 
-        try:
-            thread = threading.Thread(target=self.download_article, args=(article_title,))
-            # thread.daemon = True
-            thread.start()
-            # thread.join()
-        except (KeyboardInterrupt, SystemExit):
-            logger.info('Received keyboard interrupt, quitting threads.')
-            sys.exit()
+            try:
+                thread = threading.Thread(target=self.download_article, args=(article_title,))
+                # thread.daemon = True
+                thread.start()
+                # thread.join()
+                return
+            except (KeyboardInterrupt, SystemExit):
+                logger.info('Received keyboard interrupt, quitting threads.')
+                sys.exit()
 
         # if threading.active_count() >= self.num_calls:
         #     logger.info('Number of active threads too big, sleeping for a while.')
