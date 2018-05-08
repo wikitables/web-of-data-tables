@@ -11,6 +11,8 @@ import re
 import sys
 import threading
 import time
+import urllib.parse
+import warnings
 from concurrent import futures
 from functools import partial
 from xml.etree import cElementTree
@@ -79,6 +81,8 @@ def parse_cli_arguments(argv):
                            help='Path to output directory')
     argparser.add_argument('--jobs', '-j', type=int, default=nb_jobs_default,
                            help='Number of jobs to run. Default (#cpus - 1)')
+    argparser.add_argument('--workers', '-w', type=int, default=nb_jobs_default,
+                           help='Number of workers in the crawler pool. Default (#cpus - 1)')
     argparser.add_argument('--debug', '-d', action='store_const', dest='loglevel',
                            const=logging.DEBUG, default=logging.WARNING, help='Show debug statements')
     argparser.add_argument('--verbose', '-v', action='store_const', dest='loglevel', const=logging.DEBUG,
@@ -105,17 +109,20 @@ class WikipediaSpider(object):
         Whether to raise an error when reaching the limit or not. Default: True
     output : str
         Path to the output folder.
+    nb_pool : int, None
+        Size of the pool for download.
     sleep : float
         Time set to sleep when the limit is reached. It can be a float. Default: 1.0
     """
 
-    def __init__(self, calls=15, period=60, clock=None, raise_on_limit=True, output='.', sleep=1.0):
+    def __init__(self, calls=15, period=60, clock=None, raise_on_limit=True, output='.', nb_workers=None):
         self.clamped_calls = max(1, calls)
         self.period = period
         self.clock = clock
         self.raise_on_limit = raise_on_limit
         self.output = output
-        self.sleep = sleep
+        # self.sleep = sleep
+        self.nb_workers = nb_workers
         self.last_reset = clock()
         self.num_calls = 0
         # Add thread safety.
@@ -133,8 +140,7 @@ class WikipediaSpider(object):
         self.urls = urls
 
     def get_all_html(self):
-        nb_cpus = multiprocessing.cpu_count()
-        with futures.ThreadPoolExecutor(max_workers=nb_cpus) as executor:
+        with futures.ThreadPoolExecutor(max_workers=self.nb_workers) as executor:
             executor.map(self.download_article, self.urls)
 
     def get_html(self, article_title):
@@ -192,7 +198,7 @@ class WikipediaSpider(object):
         article_title : str
             Article title.
         """
-        api_url = '{0}page/html/{1}?redirect=false'.format(api_url_base, article_title)
+        api_url = '{0}page/html/{1}?redirect=false'.format(api_url_base, urllib.parse.quote_plus(article_title))
         # query the API
         response = self.session.get(api_url, headers=headers)
         if response.status_code == 200:
@@ -217,7 +223,7 @@ class WikipediaSpider(object):
             if (self.total_downloads + 1) % 100000 == 0:
                 logger.info("processed #%d articles (at %r now)", self.total_downloads + 1, article_title)
         else:
-            print('[!] HTTP {0} calling [{1}]'.format(response.status_code, api_url))
+            warnings.warn('[!] HTTP {0} calling [{1}]'.format(response.status_code, api_url))
         time.sleep(0.1)
 
     def __period_remaining(self):
@@ -440,7 +446,7 @@ def parse_all_articles(xml_dump, min_article_character, nb_jobs=None):
             yield article[0]
 
 
-def parse_articles(xml_dump, output, min_article_character=200, nb_jobs=None):
+def parse_articles(xml_dump, output, min_article_character=200, nb_jobs=None, nb_workers=None):
     """ Parse the Wikipedia dump, retrieve the articles' title and request the HTML
     text from the Wikipedia API.
 
@@ -454,6 +460,8 @@ def parse_articles(xml_dump, output, min_article_character=200, nb_jobs=None):
         Minimum number of characters to consider in one article.
     nb_jobs : int, None
         Number of jobs to use.
+    nb_workers : int, None
+        Size of the pool for download.
     """
     article_stream = parse_all_articles(xml_dump, min_article_character, nb_jobs)
     # create output directory if does not exist
@@ -463,7 +471,7 @@ def parse_articles(xml_dump, output, min_article_character=200, nb_jobs=None):
     # max 200 requests per second
     now = time.monotonic if hasattr(time, 'monotonic') else time.time
     spider = WikipediaSpider(calls=199, period=1, clock=now, raise_on_limit=True,
-                             output=output_path, sleep=2.5)
+                             output=output_path, nb_workers=nb_workers)
     spider.set_urls(article_stream)
     spider.get_all_html()
     # max_count = 2
@@ -487,8 +495,9 @@ def main(argv):
     dump_file = args.file
     output_dir = args.output
     nb_jobs = args.jobs
-    logger.info('running %s (jobs=%d)', ' '.join(sys.argv), nb_jobs)
-    parse_articles(dump_file, output=output_dir, nb_jobs=nb_jobs)
+    nb_workers = args.workers
+    logger.info('running %s (jobs=%d, pool=%d)', ' '.join(sys.argv), nb_jobs, nb_workers)
+    parse_articles(dump_file, output=output_dir, nb_jobs=nb_jobs, nb_workers=nb_workers)
 
 
 if __name__ == "__main__":
