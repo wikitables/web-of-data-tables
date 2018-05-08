@@ -126,7 +126,7 @@ class WikipediaSpider(object):
             Article title.
         """
         thread = threading.Thread(target=self.download_article, args=(article_title,))
-        thread.daemon = True
+        # thread.daemon = True
         thread.start()
 
     def download_article(self, article_title):
@@ -155,7 +155,7 @@ class WikipediaSpider(object):
             # maximum then sleep the thread for half a second.
             if self.num_calls > self.clamped_calls:
                 logger.info('Sleeping for half a second')
-                time.sleep(0.5)
+                time.sleep(2)
                 return
 
         # query the API
@@ -183,10 +183,12 @@ class WikipediaSpider(object):
             # return None
 
     def __period_remaining(self):
-        """
-        Return the period remaining for the current rate limit window.
-        :return: The remaing period.
-        :rtype: float
+        """ Return the period remaining for the current rate limit window.
+
+        Returns
+        -------
+        float
+            The remaining period.
         """
         elapsed = self.clock() - self.last_reset
         return self.period - elapsed
@@ -418,7 +420,7 @@ def parse_articles(xml_dump, output, min_article_character=200, nb_jobs=None):
     article_stream = parse_all_articles(xml_dump, min_article_character, nb_jobs)
     # create output directory if does not exist
     output_path = os.path.abspath(output)
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    os.makedirs(output_path, exist_ok=True)
     # create a spider that respects the crawling rules:
     # max 200 requests per second
     now = time.monotonic if hasattr(time, 'monotonic') else time.time
