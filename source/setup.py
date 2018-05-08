@@ -34,6 +34,8 @@ setup(
         'bidict',
         'pandas',
         'tqdm',
+        'requests',
+        'smart_open>=1.5.7',
         'pytest>=3.2.0',
         'joblib>=0.10.3',
         'bidict>=0.12.0',
