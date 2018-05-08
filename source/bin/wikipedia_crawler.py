@@ -145,12 +145,22 @@ class WikipediaSpider(object):
                 time.sleep(self.sleep)
                 return
 
-        thread = threading.Thread(target=self.download_article, args=(article_title,))
-        # thread.daemon = True
-        thread.start()
+        try:
+            thread = threading.Thread(target=self.download_article2, args=(article_title,))
+            # thread.daemon = True
+            thread.start()
+            thread.join()
+        except (KeyboardInterrupt, SystemExit):
+            logger.info('Received keyboard interrupt, quitting threads.')
+            sys.exit()
+
+        if threading.active_count() >= self.num_calls:
+            logger.info('Number of active threads too big, sleeping for a while.')
+            time.sleep(self.sleep)
 
     def download_article2(self, article_title):
-        print(self.num_calls,article_title)
+        print(self.num_calls, article_title)
+        time.sleep(2)
 
     def download_article(self, article_title):
         """ Method to query the API and retrieve the HTML text.
