@@ -11,6 +11,7 @@ import re
 import sys
 import threading
 import time
+from concurrent import futures
 from functools import partial
 from xml.etree import cElementTree
 
@@ -117,6 +118,18 @@ class WikipediaSpider(object):
         self.num_calls = 0
         # Add thread safety.
         self.lock = threading.RLock()
+        # Get a session to the service
+        self.session = requests.Session()
+        self.urls = None
+        self.total_downloads = 0
+
+    def set_urls(self, urls):
+        self.urls = urls
+
+    def get_all_html(self):
+        nb_cpus = multiprocessing.cpu_count() - 1
+        with futures.ThreadPoolExecutor(max_workers=nb_cpus) as executor:
+            executor.map(self.download_article, self.urls)
 
     def get_html(self, article_title):
         """ Retrieve the HTML text from the API.
@@ -175,7 +188,7 @@ class WikipediaSpider(object):
         """
         api_url = '{0}page/html/{1}?redirect=false'.format(api_url_base, article_title)
         # query the API
-        response = requests.get(api_url, headers=headers)
+        response = self.session.get(api_url, headers=headers)
         if response.status_code == 200:
             # return response.content.decode('utf-8')
             html_text = response.content.decode('utf-8')
@@ -193,6 +206,10 @@ class WikipediaSpider(object):
 
             with bz2.BZ2File('{0}/{1}.html.bz2'.format(self.output, article_title), mode='w') as bz2f:
                 bz2f.write(str.encode(html_text))
+
+            self.total_downloads += 1
+            if (self.total_downloads + 1) % 100000 == 0:
+                logger.info("processed #%d articles (at %r now)", self.total_downloads + 1, article_title)
         else:
             print('[!] HTTP {0} calling [{1}]'.format(response.status_code, api_url))
         time.sleep(0.1)
@@ -442,15 +459,18 @@ def parse_articles(xml_dump, output, min_article_character=200, nb_jobs=None):
     spider = WikipediaSpider(calls=199, period=1, clock=now, raise_on_limit=True,
                              output=output_path, sleep=2.5)
     # max_count = 2
-    for idx, article in enumerate(article_stream):
-        article_title = article[0]
-        # print('TITLE=',article_title)
-        spider.get_html(article_title)
-        # print(html_text)
-        # if idx > max_count:
-        #    break
-        if (idx + 1) % 100000 == 0:
-            logger.info("processed #%d articles (at %r now)", idx + 1, article_title)
+    # for idx, article in enumerate(article_stream):
+    #     article_title = article[0]
+    #     # print('TITLE=',article_title)
+    #     spider.get_html(article_title)
+    #     # print(html_text)
+    #     # if idx > max_count:
+    #     #    break
+    #     if (idx + 1) % 100000 == 0:
+    #         logger.info("processed #%d articles (at %r now)", idx + 1, article_title)
+
+    spider.set_urls(article_stream)
+    spider.get_all_html()
 
 
 def main(argv):
