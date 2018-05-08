@@ -145,7 +145,7 @@ class WikipediaSpider(object):
                 time.sleep(self.sleep)
                 return
 
-        thread = threading.Thread(target=self.download_article2, args=(article_title,))
+        thread = threading.Thread(target=self.download_article, args=(article_title,))
         # thread.daemon = True
         thread.start()
 
@@ -427,8 +427,8 @@ def parse_articles(xml_dump, output, min_article_character=200, nb_jobs=None):
     # create a spider that respects the crawling rules:
     # max 200 requests per second
     now = time.monotonic if hasattr(time, 'monotonic') else time.time
-    spider = WikipediaSpider(calls=200, period=1, clock=now, raise_on_limit=True,
-                             output=output_path, sleep=1.5)
+    spider = WikipediaSpider(calls=199, period=1, clock=now, raise_on_limit=True,
+                             output=output_path, sleep=2.5)
     # max_count = 2
     for idx, article in enumerate(article_stream):
         article_title = article[0]
