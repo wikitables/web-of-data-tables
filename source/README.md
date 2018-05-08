@@ -32,3 +32,11 @@ To install for the current user:
 (wtables) $ make install-user
 ```
 
+### Crawling Wikipedia articles
+
+To clone the current Wikipedia articles, we use the Wikipedia full dump. This dump contains information about
+disambiguation and redirect pages, so we are able to filter the.
+
+We download the English Wikipedia dump from: [https://dumps.wikimedia.org/enwiki/20180501/]()
+
+More specifically, we downloaded the file [https://dumps.wikimedia.org/enwiki/20180501/enwiki-20180501-pages-articles.xml.bz2]()
