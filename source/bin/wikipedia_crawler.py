@@ -417,7 +417,7 @@ def parse_articles(xml_dump, output, min_article_character=200, nb_jobs=None):
     """
     article_stream = parse_all_articles(xml_dump, min_article_character, nb_jobs)
     # create output directory if does not exist
-    output_path = os.path.join(' ', output)
+    output_path = os.path.abspath(output)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     # create a spider that respects the crawling rules:
     # max 200 requests per second
