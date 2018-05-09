@@ -142,9 +142,10 @@ class WikipediaSpider(object):
     def get_all_html(self):
         # with futures.ThreadPoolExecutor(max_workers=self.nb_workers) as executor:
         #     executor.map(self.download_article, self.urls)
-        with multiprocessing.Pool(processes=self.nb_workers) as executor:
-            executor.map(self.download_article, self.urls)
-            executor.join()
+        pool = multiprocessing.Pool(processes=self.nb_workers)
+        pool.map(self.download_article, self.urls)
+        pool.close()
+        pool.join()
 
     def get_html(self, article_title):
         """ Retrieve the HTML text from the API.
