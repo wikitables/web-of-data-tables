@@ -11,10 +11,10 @@ import re
 import sys
 import threading
 import time
-import urllib.parse
 import warnings
 from concurrent import futures
 from functools import partial
+from urllib.parse import quote
 from xml.etree import cElementTree
 
 import requests
@@ -129,8 +129,8 @@ class WikipediaSpider(object):
         self.lock = threading.RLock()
         # Get a session to the service
         self.session = requests.Session()
-        retry = Retry(connect=3, backoff_factor=0.5)
-        adapter = HTTPAdapter(pool_connections=10, pool_maxsize=20, max_retries=retry)
+        retry = Retry(connect=5, backoff_factor=0.5)
+        adapter = HTTPAdapter(pool_connections=100, pool_maxsize=100, max_retries=retry, pool_block=True)
         self.session.mount('http://', adapter)
         self.session.mount('https://', adapter)
         self.urls = None
@@ -140,6 +140,7 @@ class WikipediaSpider(object):
         self.urls = urls
 
     def get_all_html(self):
+        # https://laike9m.com/blog/requests-secret-pool_connections-and-pool_maxsize,89/
         with futures.ThreadPoolExecutor(max_workers=self.nb_workers) as executor:
             executor.map(self.download_article, self.urls)
 
@@ -198,7 +199,7 @@ class WikipediaSpider(object):
         article_title : str
             Article title.
         """
-        api_url = '{0}page/html/{1}?redirect=false'.format(api_url_base, article_title)
+        api_url = '{0}page/html/{1}?redirect=false'.format(api_url_base, quote(article_title, safe=''))
         # query the API
         response = self.session.get(api_url, headers=headers)
         if response.status_code == 200:
