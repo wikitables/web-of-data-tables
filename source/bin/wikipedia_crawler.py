@@ -140,8 +140,11 @@ class WikipediaSpider(object):
         self.urls = urls
 
     def get_all_html(self):
-        with futures.ThreadPoolExecutor(max_workers=self.nb_workers) as executor:
+        # with futures.ThreadPoolExecutor(max_workers=self.nb_workers) as executor:
+        #     executor.map(self.download_article, self.urls)
+        with multiprocessing.Pool(processes=self.nb_workers) as executor:
             executor.map(self.download_article, self.urls)
+            executor.join()
 
     def get_html(self, article_title):
         """ Retrieve the HTML text from the API.
@@ -220,11 +223,11 @@ class WikipediaSpider(object):
                 bz2f.write(str.encode(html_text))
 
             self.total_downloads += 1
-            if (self.total_downloads + 1) % 100000 == 0:
-                logger.info("processed #%d articles (at %r now)", self.total_downloads + 1, article_title)
+            if self.total_downloads % 200 == 0:  # 100000
+                logger.info("processed #%d articles (at %r now)", self.total_downloads, article_title)
         else:
             warnings.warn('[!] HTTP {0} calling [{1}]'.format(response.status_code, api_url))
-        time.sleep(0.1)
+        # time.sleep(0.1)
 
     def __period_remaining(self):
         """ Return the period remaining for the current rate limit window.
