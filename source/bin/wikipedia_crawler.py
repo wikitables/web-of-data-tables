@@ -114,6 +114,7 @@ class WikipediaSpider(object):
         self.session.mount('https://', adapter)
         self.urls = None
         self.total_downloads = 0
+        self.total_titles = 0
 
         def signal_handler(signal, frame):
             logger.warning('Aborted by user.')
@@ -128,6 +129,8 @@ class WikipediaSpider(object):
         # https://laike9m.com/blog/requests-secret-pool_connections-and-pool_maxsize,89/
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.nb_workers) as executor:
             executor.map(self.download_article, self.urls)
+
+        logger.info('Crawler finished! {0} articles downloaded'.format(self.total_titles))
 
     def download_article(self, article_title):
         """ Method to query the API and retrieve the HTML text.
@@ -154,10 +157,9 @@ class WikipediaSpider(object):
                         bz2f.write(str.encode(html_text))
 
                     self.total_downloads += 1
+                    # do not hit the API too hard. Small sleep each 200 downloads
                     if self.total_downloads % 200 == 0:
-                        time.sleep(0.1)  # do not hit the API too hard
-                    if self.total_downloads % 10000 == 0:
-                        logger.info("processed #%d articles (at %r now)", self.total_downloads, article_title)
+                        time.sleep(0.1)
                 else:
                     logger.warning('[!] HTTP {0} calling [{1}]'.format(response.status_code, api_url))
                     # sleep if the server has received too many requests
@@ -165,6 +167,10 @@ class WikipediaSpider(object):
                         time.sleep(5)
             except Exception as ex:
                 logger.warning('Error downloading {0}: {1}'.format(article_title, ex))
+
+        self.total_titles += 1
+        if self.total_titles % 10000 == 0:
+            logger.info('Processed #{0} articles (at {1} now)'.format(self.total_titles, article_title))
 
 
 class WikiParser(object):
