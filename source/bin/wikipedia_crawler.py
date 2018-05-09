@@ -29,7 +29,7 @@ __author__ = 'emunoz'
 logging.basicConfig(format='%(asctime)s.%(msecs)03d %(levelname)s {%(module)s} [%(funcName)s] %(message)s',
                     datefmt='%Y-%m-%d,%H:%M:%S', level=logging.INFO)
 logger = logging.getLogger('wodt')
-logger.propagate = True
+logging.getLogger(requests.packages.urllib3.__package__).setLevel(logging.ERROR)
 
 """Table markup"""
 IGNORED_NAMESPACES = [
