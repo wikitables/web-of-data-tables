@@ -11,7 +11,6 @@ import re
 import sys
 import threading
 import time
-import warnings
 from concurrent import futures
 from functools import partial
 from urllib.parse import quote
@@ -141,7 +140,8 @@ class WikipediaSpider(object):
 
     def get_all_html(self):
         # https://laike9m.com/blog/requests-secret-pool_connections-and-pool_maxsize,89/
-        with futures.ThreadPoolExecutor(max_workers=self.nb_workers) as executor:
+        # with futures.ThreadPoolExecutor(max_workers=self.nb_workers) as executor:
+        with futures.ProcessPoolExecutor(max_workers=self.nb_workers) as executor:
             executor.map(self.download_article, self.urls)
 
     def get_html(self, article_title):
@@ -224,7 +224,7 @@ class WikipediaSpider(object):
             if self.total_downloads % 200 == 0:  # 100000
                 logger.info("processed #%d articles (at %r now)", self.total_downloads, article_title)
         else:
-            warnings.warn('[!] HTTP {0} calling [{1}]'.format(response.status_code, api_url))
+            logger.warning('[!] HTTP {0} calling [{1}]'.format(response.status_code, api_url))
         # time.sleep(0.1)
 
     def __period_remaining(self):
@@ -471,7 +471,7 @@ def parse_articles(xml_dump, output, min_article_character=200, nb_jobs=None, nb
     # create a spider that respects the crawling rules:
     # max 200 requests per second
     now = time.monotonic if hasattr(time, 'monotonic') else time.time
-    spider = WikipediaSpider(calls=199, period=1, clock=now, raise_on_limit=True,
+    spider = WikipediaSpider(calls=200, period=1, clock=now, raise_on_limit=True,
                              output=output_path, nb_workers=nb_workers)
     spider.set_urls(article_stream)
     spider.get_all_html()
