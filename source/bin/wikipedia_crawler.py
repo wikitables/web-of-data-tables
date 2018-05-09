@@ -199,7 +199,7 @@ class WikipediaSpider(object):
         article_title : str
             Article title.
         """
-        api_url = '{0}page/html/{1}?redirect=false'.format(api_url_base, quote(article_title, safe=''))
+        api_url = '{0}page/html/{1}?redirect=false'.format(api_url_base, quote(article_title, safe=' '))
         # query the API
         response = self.session.get(api_url, headers=headers)
         if response.status_code == 200:
