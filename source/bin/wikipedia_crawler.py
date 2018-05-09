@@ -140,8 +140,7 @@ class WikipediaSpider(object):
 
     def get_all_html(self):
         # https://laike9m.com/blog/requests-secret-pool_connections-and-pool_maxsize,89/
-        # with futures.ThreadPoolExecutor(max_workers=self.nb_workers) as executor:
-        with futures.ProcessPoolExecutor(max_workers=self.nb_workers) as executor:
+        with futures.ThreadPoolExecutor(max_workers=self.nb_workers) as executor:
             executor.map(self.download_article, self.urls)
 
     def get_html(self, article_title):
