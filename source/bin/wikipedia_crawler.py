@@ -130,7 +130,7 @@ class WikipediaSpider(object):
         # Get a session to the service
         self.session = requests.Session()
         retry = Retry(connect=3, backoff_factor=0.5)
-        adapter = HTTPAdapter(max_retries=retry)
+        adapter = HTTPAdapter(pool_connections=10, pool_maxsize=20, max_retries=retry)
         self.session.mount('http://', adapter)
         self.session.mount('https://', adapter)
         self.urls = None
