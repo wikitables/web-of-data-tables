@@ -139,8 +139,9 @@ class WikipediaSpider(object):
         article_title : str
             Article title.
         """
-        api_url = '{0}page/html/{1}?redirect=false'.format(api_url_base, quote(article_title, safe=' ()'))
-        output_filename = '{0}/{1}.html.bz2'.format(self.output, article_title)
+        normalized_title = quote(article_title, safe=' ()')
+        api_url = '{0}page/html/{1}?redirect=false'.format(api_url_base, normalized_title)
+        output_filename = '{0}/{1}.html.bz2'.format(self.output, normalized_title)
         # check whether the file was already downloaded
         if not os.path.isfile(output_filename):
             try:
@@ -159,8 +160,11 @@ class WikipediaSpider(object):
                         logger.info("processed #%d articles (at %r now)", self.total_downloads, article_title)
                 else:
                     logger.warning('[!] HTTP {0} calling [{1}]'.format(response.status_code, api_url))
+                    # sleep if the server has received too many requests
+                    if response.status_code == 429:
+                        time.sleep(5)
             except Exception as ex:
-                logger.error('Error downloading {0}: {1}'.format(article_title, ex))
+                logger.warning('Error downloading {0}: {1}'.format(article_title, ex))
 
 
 class WikiParser(object):
