@@ -3,15 +3,15 @@
 
 import argparse
 import bz2
+import concurrent.futures
 import itertools
 import logging
 import multiprocessing
 import os
 import re
+import signal
 import sys
-import threading
 import time
-from concurrent import futures
 from functools import partial
 from urllib.parse import quote
 from xml.etree import cElementTree
@@ -92,41 +92,20 @@ def parse_cli_arguments(argv):
 
 class WikipediaSpider(object):
     """ Sets gentle spider that respects download limits of an API.
-    
-    Based on ratelimit [1] functions.
-    
-    [1] https://github.com/tomasbasham/ratelimit/blob/master/ratelimit/decorators.py
+
+    The spider sends asynchronous requests to the API.
 
     Parameters
     ----------
-    calls : int
-        Number of call in the `period`. Default 15
-    period : int
-        Seconds of the period. Default: 60
-    clock : time.time
-        Clock time object when started.
-    raise_on_limit : bool
-        Whether to raise an error when reaching the limit or not. Default: True
     output : str
         Path to the output folder.
-    nb_pool : int, None
-        Size of the pool for download.
-    sleep : float
-        Time set to sleep when the limit is reached. It can be a float. Default: 1.0
+    nb_workers : int, None
+        Number of workers to use in the thread pool for download.
     """
 
-    def __init__(self, calls=15, period=60, clock=None, raise_on_limit=True, output='.', nb_workers=None):
-        self.clamped_calls = max(1, calls)
-        self.period = period
-        self.clock = clock
-        self.raise_on_limit = raise_on_limit
+    def __init__(self, output='.', nb_workers=None):
         self.output = output
-        # self.sleep = sleep
         self.nb_workers = nb_workers
-        self.last_reset = clock()
-        self.num_calls = 0
-        # Add thread safety.
-        self.lock = threading.RLock()
         # Get a session to the service
         self.session = requests.Session()
         retry = Retry(connect=5, backoff_factor=0.5)
@@ -136,58 +115,18 @@ class WikipediaSpider(object):
         self.urls = None
         self.total_downloads = 0
 
+        def signal_handler(signal, frame):
+            logger.warning('Aborted by user.')
+            sys.exit(0)
+        signal.signal(signal.SIGINT, signal_handler)
+
     def set_urls(self, urls):
         self.urls = urls
 
     def get_all_html(self):
         # https://laike9m.com/blog/requests-secret-pool_connections-and-pool_maxsize,89/
-        with futures.ThreadPoolExecutor(max_workers=self.nb_workers) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.nb_workers) as executor:
             executor.map(self.download_article, self.urls)
-
-    def get_html(self, article_title):
-        """ Retrieve the HTML text from the API.
-
-        A thread is created to handle each request.
-
-        Parameters
-        ----------
-        article_title : str
-            Article title.
-        """
-        with self.lock:
-            period_remaining = self.__period_remaining()
-            # If the time window has elapsed then reset.
-            if period_remaining <= 0:
-                self.num_calls = 0
-                self.last_reset = self.clock()
-
-            # Increase the number of attempts to call the function.
-            self.num_calls += 1
-
-            # If the number of attempts to call the function exceeds the
-            # maximum then sleep the thread for half a second.
-            if self.num_calls > self.clamped_calls:
-                logger.info('Sleeping for {} second(s)'.format(period_remaining))
-                time.sleep(period_remaining)
-                return
-
-            try:
-                thread = threading.Thread(target=self.download_article, args=(article_title,))
-                # thread.daemon = True
-                thread.start()
-                # thread.join()
-                return
-            except (KeyboardInterrupt, SystemExit):
-                logger.info('Received keyboard interrupt, quitting threads.')
-                sys.exit()
-
-        # if threading.active_count() >= self.num_calls:
-        #     logger.info('Number of active threads too big, sleeping for a while.')
-        #     time.sleep(self.sleep)
-
-    def download_article2(self, article_title):
-        print(self.num_calls, article_title)
-        time.sleep(0.1)
 
     def download_article(self, article_title):
         """ Method to query the API and retrieve the HTML text.
@@ -199,44 +138,29 @@ class WikipediaSpider(object):
         article_title : str
             Article title.
         """
-        api_url = '{0}page/html/{1}?redirect=false'.format(api_url_base, quote(article_title, safe=' '))
-        # query the API
-        response = self.session.get(api_url, headers=headers)
-        if response.status_code == 200:
-            # return response.content.decode('utf-8')
-            html_text = response.content.decode('utf-8')
+        api_url = '{0}page/html/{1}?redirect=false'.format(api_url_base, quote(article_title, safe=' ()'))
+        output_filename = '{0}/{1}.html.bz2'.format(self.output, article_title)
+        # check whether the file was already downloaded
+        if os.path.isfile(output_filename):
+            return
+        try:
+            # query the API
+            response = self.session.get(api_url, headers=headers, timeout=60)
+            if response.status_code == 200:
+                html_text = response.content.decode('utf-8')
 
-            # fix the base and css
-            # soup = BeautifulSoup(html_text, 'html.parser')
-            # soup.base['href'] = 'http://en.wikipedia.org/wiki/'
-            # print(soup.base)
+                with bz2.BZ2File(output_filename, mode='w') as bz2f:
+                    bz2f.write(str.encode(html_text))
 
-            # links stay relative https://stackoverflow.com/a/44002598
-            # https://codereview.stackexchange.com/questions/100490/extracting-and-normalizing-urls-in-an-html-document
-            # http://www.compjour.org/warmups/govt-text-releases/extracting-absolute-wh-press-briefings-urls/
-            # links = soup.find_all('a')
-            # print(links)
-
-            with bz2.BZ2File('{0}/{1}.html.bz2'.format(self.output, article_title), mode='w') as bz2f:
-                bz2f.write(str.encode(html_text))
-
-            self.total_downloads += 1
-            if self.total_downloads % 200 == 0:  # 100000
-                logger.info("processed #%d articles (at %r now)", self.total_downloads, article_title)
-        else:
-            logger.warning('[!] HTTP {0} calling [{1}]'.format(response.status_code, api_url))
-        # time.sleep(0.1)
-
-    def __period_remaining(self):
-        """ Return the period remaining for the current rate limit window.
-
-        Returns
-        -------
-        float
-            The remaining period.
-        """
-        elapsed = self.clock() - self.last_reset
-        return self.period - elapsed
+                self.total_downloads += 1
+                if self.total_downloads % 200 == 0:
+                    time.sleep(0.1)  # do not hit the API too hard
+                if self.total_downloads % 10000 == 0:
+                    logger.info("processed #%d articles (at %r now)", self.total_downloads, article_title)
+            else:
+                logger.warning('[!] HTTP {0} calling [{1}]'.format(response.status_code, api_url))
+        except Exception as ex:
+            logger.error('Error downloading {0}: {1}'.format(article_title, ex))
 
 
 class WikiParser(object):
@@ -470,9 +394,8 @@ def parse_articles(xml_dump, output, min_article_character=200, nb_jobs=None, nb
     os.makedirs(output_path, exist_ok=True)
     # create a spider that respects the crawling rules:
     # max 200 requests per second
-    now = time.monotonic if hasattr(time, 'monotonic') else time.time
-    spider = WikipediaSpider(calls=200, period=1, clock=now, raise_on_limit=True,
-                             output=output_path, nb_workers=nb_workers)
+    # now = time.monotonic if hasattr(time, 'monotonic') else time.time
+    spider = WikipediaSpider(output=output_path, nb_workers=nb_workers)
     spider.set_urls(article_stream)
     spider.get_all_html()
     # max_count = 2
