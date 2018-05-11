@@ -1,6 +1,8 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import pandas as pd
 import requests
-
 
 # Found at https://codereview.stackexchange.com/a/156399
 
@@ -9,4 +11,3 @@ response = requests.get(url)
 
 df = pd.read_html(response.content)[0]
 print(df)
-

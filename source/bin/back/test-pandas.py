@@ -1,10 +1,12 @@
-import wikimarkup
-import wikitextparser as wtp
-
-import wikipedia as wp
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import pandas as pd
+import wikimarkup
+import wikipedia as wp
+import wikitextparser as wtp
 from pyquery import PyQuery
+
 
 def get_tables_1(wiki):
     html = PyQuery(wikimarkup.parse(wiki))
