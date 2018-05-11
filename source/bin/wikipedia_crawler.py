@@ -165,6 +165,8 @@ class WikipediaSpider(object):
                     # sleep if the server has received too many requests
                     if response.status_code == 429:
                         time.sleep(5)
+                        # retry to download
+                        # self.download_article(article_title)
             except Exception as ex:
                 logger.warning('Error downloading {0}: {1}'.format(article_title, ex))
 
