@@ -1,14 +1,18 @@
-"""Create CSVs from all tables on a Wikipedia article."""
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import csv
 import os
 import platform
 
-from bs4 import BeautifulSoup
 import requests
+from bs4 import BeautifulSoup
+
+""" Create CSVs from all tables on a Wikipedia article. """
+
 
 def scrape(url, output_name):
-    """Create CSVs from all tables in a Wikipedia article.
+    """ Create CSVs from all tables in a Wikipedia article.
 
     ARGS:
         url (str): The full URL of the Wikipedia article to scrape tables from.
@@ -52,7 +56,7 @@ def scrape(url, output_name):
 
 
 def write_html_table_to_csv(table, writer):
-    """Write HTML table from Wikipedia to a CSV file.
+    """ Write HTML table from Wikipedia to a CSV file.
 
     ARGS:
         table (bs4.Tag): The bs4 Tag object being analyzed.
@@ -134,9 +138,9 @@ def clean_data(row):
 
         cleaned = (
             ''.join(no_footnotes)  # Combine elements into single string
-            .replace('\xa0', ' ')  # Replace non-breaking spaces
-            .replace('\n', ' ')  # Replace newlines
-            .strip()
+                .replace('\xa0', ' ')  # Replace non-breaking spaces
+                .replace('\n', ' ')  # Replace newlines
+                .strip()
         )
 
         cleaned_cells += [cleaned]
