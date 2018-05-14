@@ -43,7 +43,6 @@ def tableTo2d(table_tag):
 
     # build an empty matrix for all possible cells
     table = [[None] * colcount for row in rows]
-    newTable="<table>"
     # fill matrix from row data
     rowspans = {}  # track pending rowspans, column number mapping to count
     start=0
@@ -51,7 +50,7 @@ def tableTo2d(table_tag):
         if start==0 and tableName!="":
             start=1
             continue
-        newTable+="<tr>"
+        #newTable+="<tr>"
         span_offset = 0  # how many columns are skipped due to row and colspans
         for col, cell in enumerate(row_elem.find_all(['td', 'th'], recursive=False)):
             # adjust for preceding row and colspans
@@ -70,13 +69,21 @@ def tableTo2d(table_tag):
                 value=value.replace("\n"," ")
             for drow, dcol in product(range(rowspan), range(colspan)):
                 try:
-                    newTable+="<"+cell.name+">"+value+"</"+cell.name+">" #table[row + drow][col + dcol] = value
+                    table[row + drow][col + dcol] = "<" + cell.name + ">" + value + "</" + cell.name + ">"
+                    #newTable +=   # table[row + drow][col + dcol] = value
                 except IndexError:
                     # rowspan or colspan outside the confines of the table
                     pass
 
         # update rowspan bookkeeping
         rowspans = {c: s - 1 for c, s in rowspans.items() if s > 1}
+        #newTable += "</tr>"
+    #newTable+="</table>"
+    newTable="<table>"
+    for r in range(len(table)):
+        newTable += "<tr>"
+        for c in range(len(table[r])):
+            newTable += table[r][c]
         newTable += "</tr>"
     newTable+="</table>"
     tableObject=Table(tableName,newTable)
