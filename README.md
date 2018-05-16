@@ -29,6 +29,8 @@ This repository contains documentation and code related to the extraction of tri
   https://arxiv.org/abs/1802.06159
 - TabVec: Table Vectors for Classification of Web Tables
   https://arxiv.org/abs/1802.06290
+- On-the-fly Table Generation
+  https://arxiv.org/abs/1805.04875 and https://www.researchgate.net/publication/325130549_On-the-fly_Table_Generation/references
 
 
 ## Programming
