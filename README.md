@@ -31,6 +31,8 @@ This repository contains documentation and code related to the extraction of tri
   https://arxiv.org/abs/1802.06290
 - On-the-fly Table Generation
   https://arxiv.org/abs/1805.04875 and https://www.researchgate.net/publication/325130549_On-the-fly_Table_Generation/references
+- Neural Semantic Parsing with Type Constraints for Semi-Structured Tables
+  http://aclweb.org/anthology/D17-1160
 
 
 ## Programming
