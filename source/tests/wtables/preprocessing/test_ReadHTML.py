@@ -1,12 +1,13 @@
 from bs4 import BeautifulSoup
 from source.wtables.preprocessing import ReadHTML as readHTML
+from source.wtables.preprocessing import ReadZipFile as readZip
 
 import unittest
 import pytest
 
 class TestReadHTML(unittest.TestCase):
 
-    #@pytest.mark.skip
+    @pytest.mark.skip
     def test_rowspan(self):
         html="""<table border="1" class="wikitable"><tr><td>1</td>
         <td colspan="2">2 and 3</td><td>4</td></tr>
@@ -16,9 +17,9 @@ class TestReadHTML(unittest.TestCase):
         <tr><td colspan="3">14,15 and 16</td></tr>
         </table>"""
         soup = BeautifulSoup(html, 'html.parser')
-        table2d = readHTML.tableTo2d(soup)
+        table2d, object = readHTML.tableTo2d(soup)
         self.assertFalse(table2d is None)
-        table2dcontent = table2d.content.replace(" ","").replace("\n","")
+        table2dcontent = table2d.replace(" ","").replace("\n","")
         result="""<table ><tr><td>1</td>
                 <td>2 and 3</td><td>2 and 3</td><td>4</td></tr>
                 <tr><td>5,9 and 13</td>
@@ -59,9 +60,9 @@ class TestReadHTML(unittest.TestCase):
         tables = readHTML.readTables(soup)
         lt = len(tables)
         self.assertEqual(lt,1)
-        table2d = readHTML.tableTo2d(tables[0])
+        table2d, tableObject = readHTML.tableTo2d(tables[0])
         self.assertFalse(table2d is None)
-        table2dcontent = table2d.content.replace(" ","").replace("\n","")
+        table2dcontent = table2d.replace(" ","").replace("\n","")
         result="""<table>
         <tr><th>Day</th><th>Seminar</th><th>Seminar</th><th>Seminar</th></tr>
         <tr><th>Day</th><th>Schedule</th><th>Schedule</th><th>Topic</th></tr>
@@ -96,9 +97,9 @@ class TestReadHTML(unittest.TestCase):
         tables = readHTML.readTables(soup)
         lt = len(tables)
         self.assertEqual(lt, 1)
-        table2d = readHTML.tableTo2d(tables[0])
+        table2d, object = readHTML.tableTo2d(tables[0])
         self.assertFalse(table2d is None)
-        table2dcontent = table2d.content.replace(" ", "").replace("\n", "")
+        table2dcontent = table2d.replace(" ", "").replace("\n", "")
         result = """<table>
         <tr><th>A</th><th>B</th><th>B</th><th>B</th></tr>
         <tr><th>A</th><th>C</th><th>C</th><th>F</th></tr>

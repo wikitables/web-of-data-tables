@@ -11,13 +11,14 @@ def readFile(path):
     tables = readHTML.readTables(soup)
     tables2d=[]
     for t in tables:
-        t2d=readHTML.tableTo2d(t)
+        html,t2d=readHTML.tableTo2d(t)
         tables2d.append(t2d)
     article = Article(title,tables2d)
     writeArticle(article)
 
 def writeArticle(article):
     f=open(article.title+".txt","w")
-    f.write(json.dumps(article.reprJSON(), cls=ComplexEncoder))
+    print(article.reprJSON())
+    f.write(json.dumps(article.reprJSON(), cls=ComplexEncoder, skipkeys=True))
+    f.close()
 
-readFile("MiamiWikipedia.html.bz2")
