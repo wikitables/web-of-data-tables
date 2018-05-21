@@ -18,7 +18,6 @@ def readFile(path):
 
 def writeArticle(article):
     f=open(article.title+".txt","w")
-    print(article.reprJSON())
     f.write(json.dumps(article.reprJSON(), cls=ComplexEncoder, skipkeys=True))
     f.close()
 

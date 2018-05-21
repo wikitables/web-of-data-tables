@@ -49,7 +49,7 @@ def tableTo2d(table_tag):
 
     if tableName != "":
         rows.pop(0)
-        print(rows)
+
 
     # build an empty matrix for all possible cells
     table = [[None] * colcount for row in rows]
@@ -98,7 +98,8 @@ def tableTo2d(table_tag):
     for r in range(len(tableHtml)):
         newTable += "<tr>"
         for c in range(len(tableHtml[r])):
-            newTable += tableHtml[r][c]
+            if (tableHtml[r][c]!=None):
+                newTable += tableHtml[r][c]
         newTable += "</tr>"
     newTable+="</table>"
     tableObject=Table(title=tableName, cells=table,attrs=tableAttr)
