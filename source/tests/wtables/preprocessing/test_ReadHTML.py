@@ -29,6 +29,21 @@ class TestReadHTML(unittest.TestCase):
                 </table>""".replace(" ", "").replace("\n", "")
         self.assertEqual(table2dcontent,result)
 
+    def test_without_span(self):
+        html="""<table border="1" class="wikitable">
+        <tr><td>1</td><td>2</td><td>3</td></tr>
+        <tr><td>4</td><td>5</td><td>6</td></tr>
+        </table>"""
+        soup = BeautifulSoup(html, 'html.parser')
+        table2d, object = readHTML.tableTo2d(soup)
+        self.assertFalse(table2d is None)
+        table2dcontent = table2d.replace(" ","").replace("\n","")
+        result="""<table>
+        <tr><td>1</td><td>2 </td><td>3</td></tr>
+        <tr><td>4</td><td>5</td><td>6</td></tr>
+        </table>""".replace(" ", "").replace("\n", "")
+        self.assertEqual(table2dcontent,result)
+
 
     def test_colspan(self):
         html = """<!DOCTYPE html><html>
@@ -42,8 +57,8 @@ class TestReadHTML(unittest.TestCase):
             <tr><th>Begin</th><th>End</th></tr></thead>
             <tbody><tr><td rowspan="2">Monday</td>
             <td rowspan="2">8:00 a.m</td><td rowspan="2">5:00 p.m</td>
-            <td>Introduction to XML</td></tr>
-            <tr><td>Validity: DTD and Relax NG</td>
+            <td rowspan="">Introduction to XML</td></tr>
+            <tr><td rowspan="">Validity: DTD and Relax NG</td>
             </tr><tr><td rowspan="4">Tuesday</td>
             <td>8:00 a.m</td><td>11:00 a.m</td>
             <td rowspan="2">XPath</td></tr><tr>

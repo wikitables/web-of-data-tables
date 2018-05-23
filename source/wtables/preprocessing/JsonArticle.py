@@ -15,17 +15,6 @@ class Table(object):
         self.cells=cells
         self.attrs = attrs
 
-    def getHeadersText(self):
-        headers=[]
-        if len(self.cells)>0:
-            for i in range(len(self.cells)):
-                for j in range(len(self.cells[0])):
-                    c=self.cells[i][j]
-                    if c.type=="th":
-                        s=BeautifulSoup("<th>"+c.content+"</th>", 'html.parser')
-                        headers.append(s.get_text())
-        return headers
-
     def getHeaders(self):
         headers=[]
         if len(self.cells)>0:
