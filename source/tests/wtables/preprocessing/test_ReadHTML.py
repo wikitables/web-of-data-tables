@@ -1,9 +1,10 @@
 from bs4 import BeautifulSoup
-from source.wtables.preprocessing import ReadHTML as readHTML
-from source.wtables.preprocessing import ReadZipFile as readZip
+from wtables.preprocessing import ReadHTML as readHTML
+from wtables.preprocessing import ReadZipFile as readZip
 
 import unittest
 import pytest
+
 
 class TestReadHTML(unittest.TestCase):
 
@@ -12,7 +13,7 @@ class TestReadHTML(unittest.TestCase):
         html="""<table border="1" class="wikitable"><tr><td>1</td>
         <td colspan="2">2 and 3</td><td>4</td></tr>
         <tr><td rowspan="3">5,9 and 13</td>
-        <td>6</td><td>7</td><td>8</td></tr> 
+        <td>6</td><td>7</td><td>8</td></tr>
         <tr><td>10</td><td>11</td><td>12</td></tr>
         <tr><td colspan="3">14,15 and 16</td></tr>
         </table>"""
@@ -23,7 +24,7 @@ class TestReadHTML(unittest.TestCase):
         result="""<table ><tr><td>1</td>
                 <td>2 and 3</td><td>2 and 3</td><td>4</td></tr>
                 <tr><td>5,9 and 13</td>
-                <td>6</td><td>7</td><td>8</td></tr> 
+                <td>6</td><td>7</td><td>8</td></tr>
                 <tr><td>5,9 and 13</td><td>10</td><td>11</td><td>12</td></tr>
                 <tr><td>5,9 and 13</td><td>14,15 and 16</td><td>14,15 and 16</td><td>14,15 and 16</td></tr>
                 </table>""".replace(" ", "").replace("\n", "")
@@ -43,7 +44,6 @@ class TestReadHTML(unittest.TestCase):
         <tr><td>4</td><td>5</td><td>6</td></tr>
         </table>""".replace(" ", "").replace("\n", "")
         self.assertEqual(table2dcontent,result)
-
 
     def test_colspan(self):
         html = """<!DOCTYPE html><html>
@@ -107,7 +107,6 @@ class TestReadHTML(unittest.TestCase):
         <tr><td rowspan="2">5</td><td colspan="2">m</td></tr>
         <tr><td rowspan="2">n</td><td colspan="2">s</td></tr>
         <tr><td>6</td> <td>t</td></tr></tbody></table>"""
-
         soup = BeautifulSoup(html, 'html.parser')
         tables = readHTML.readTables(soup)
         lt = len(tables)
@@ -120,21 +119,22 @@ class TestReadHTML(unittest.TestCase):
         <tr><th>A</th><th>C</th><th>C</th><th>F</th></tr>
         <tr><th>A</th><th>D</th><th>E</th><th>F</th></tr>
         <tr><td>1</td><td>a</td><td>b</td><td>x</td></tr>
-        <tr><td>1</td><td>a</td><td>b</td><td>y</td></tr>        
+        <tr><td>1</td><td>a</td><td>b</td><td>y</td></tr>
         <tr><td>2</td><td>cd</td><td>cd</td><td>z</td></tr>
         <tr><td>2</td><td>e</td><td>f</td><td>z</td></tr>
         <tr><td>2</td><td>e</td><td>f</td><td>w</td></tr>
-        <tr><td>2</td><td>g</td><td>h</td><td>w</td></tr>        
+        <tr><td>2</td><td>g</td><td>h</td><td>w</td></tr>
         <tr><th>3</th><th>3</th><th>3</th><th>3</th></tr>
         <tr><td >4</td><td >ijr</td><td >ijr</td><td >ijr</td></tr>
         <tr><td >4</td><td >5</td><td >m</td><td >m</td></tr>
-        <tr><td >4</td><td >5</td><td >n</td><td >s</td></tr>        
+        <tr><td >4</td><td >5</td><td >n</td><td >s</td></tr>
         <tr><td >4</td><td >6</td><td >n</td><td >t</td></tr>
         </table>""".replace(
             " ", "").replace("\n", "")
         print(table2dcontent)
         print(result)
         self.assertEqual(table2dcontent, result)
+
 
 if __name__ == '__main__':
     unittest.main()
