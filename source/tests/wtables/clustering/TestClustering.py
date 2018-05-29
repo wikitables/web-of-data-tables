@@ -1,7 +1,9 @@
-import pandas as pd
-from itertools import islice
+# -*- coding: utf-8 -*-
+
 import linecache
 import sys
+
+import pandas as pd
 
 
 class ClusterTables(object):
