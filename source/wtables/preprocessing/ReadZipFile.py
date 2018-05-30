@@ -1,8 +1,9 @@
 import bz2
 from bs4 import BeautifulSoup
-from source.wtables.preprocessing import ReadHTML as readHTML
-from source.wtables.preprocessing.JsonArticle import *
+from wtables.preprocessing import ReadHTML as readHTML
+from wtables.preprocessing.JsonArticle import *
 import json
+
 
 def readFile(path):
     bz_file = bz2.BZ2File(path)
@@ -15,6 +16,7 @@ def readFile(path):
         tables2d.append(t2d)
     article = Article(title,tables2d)
     writeArticle(article)
+
 
 def writeArticle(article):
     f=open(article.title+".txt","w")

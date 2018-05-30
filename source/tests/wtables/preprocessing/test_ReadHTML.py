@@ -1,49 +1,51 @@
-from bs4 import BeautifulSoup
-from source.wtables.preprocessing import ReadHTML as readHTML
-from source.wtables.preprocessing import ReadZipFile as readZip
+# -*- coding: utf-8 -*-
 
 import unittest
+
 import pytest
+from bs4 import BeautifulSoup
+
+from wtables.preprocessing import ReadHTML as readHTML
+
 
 class TestReadHTML(unittest.TestCase):
 
     @pytest.mark.skip
     def test_rowspan(self):
-        html="""<table border="1" class="wikitable"><tr><td>1</td>
+        html = """<table border="1" class="wikitable"><tr><td>1</td>
         <td colspan="2">2 and 3</td><td>4</td></tr>
         <tr><td rowspan="3">5,9 and 13</td>
-        <td>6</td><td>7</td><td>8</td></tr> 
+        <td>6</td><td>7</td><td>8</td></tr>
         <tr><td>10</td><td>11</td><td>12</td></tr>
         <tr><td colspan="3">14,15 and 16</td></tr>
         </table>"""
         soup = BeautifulSoup(html, 'html.parser')
         table2d, object = readHTML.tableTo2d(soup)
         self.assertFalse(table2d is None)
-        table2dcontent = table2d.replace(" ","").replace("\n","")
-        result="""<table ><tr><td>1</td>
+        table2dcontent = table2d.replace(" ", "").replace("\n", "")
+        result = """<table ><tr><td>1</td>
                 <td>2 and 3</td><td>2 and 3</td><td>4</td></tr>
                 <tr><td>5,9 and 13</td>
-                <td>6</td><td>7</td><td>8</td></tr> 
+                <td>6</td><td>7</td><td>8</td></tr>
                 <tr><td>5,9 and 13</td><td>10</td><td>11</td><td>12</td></tr>
                 <tr><td>5,9 and 13</td><td>14,15 and 16</td><td>14,15 and 16</td><td>14,15 and 16</td></tr>
                 </table>""".replace(" ", "").replace("\n", "")
-        self.assertEqual(table2dcontent,result)
+        self.assertEqual(table2dcontent, result)
 
     def test_without_span(self):
-        html="""<table border="1" class="wikitable">
+        html = """<table border="1" class="wikitable">
         <tr><td>1</td><td>2</td><td>3</td></tr>
         <tr><td>4</td><td>5</td><td>6</td></tr>
         </table>"""
         soup = BeautifulSoup(html, 'html.parser')
         table2d, object = readHTML.tableTo2d(soup)
         self.assertFalse(table2d is None)
-        table2dcontent = table2d.replace(" ","").replace("\n","")
-        result="""<table>
+        table2dcontent = table2d.replace(" ", "").replace("\n", "")
+        result = """<table>
         <tr><td>1</td><td>2 </td><td>3</td></tr>
         <tr><td>4</td><td>5</td><td>6</td></tr>
         </table>""".replace(" ", "").replace("\n", "")
-        self.assertEqual(table2dcontent,result)
-
+        self.assertEqual(table2dcontent, result)
 
     def test_colspan(self):
         html = """<!DOCTYPE html><html>
@@ -74,11 +76,11 @@ class TestReadHTML(unittest.TestCase):
         soup = BeautifulSoup(html, 'html.parser')
         tables = readHTML.readTables(soup)
         lt = len(tables)
-        self.assertEqual(lt,1)
+        self.assertEqual(lt, 1)
         table2d, tableObject = readHTML.tableTo2d(tables[0])
         self.assertFalse(table2d is None)
-        table2dcontent = table2d.replace(" ","").replace("\n","")
-        result="""<table>
+        table2dcontent = table2d.replace(" ", "").replace("\n", "")
+        result = """<table>
         <tr><th>Day</th><th>Seminar</th><th>Seminar</th><th>Seminar</th></tr>
         <tr><th>Day</th><th>Schedule</th><th>Schedule</th><th>Topic</th></tr>
         <tr><th>Day</th><th>Begin</th><th>End</th><th>Topic</th></tr>
@@ -88,11 +90,12 @@ class TestReadHTML(unittest.TestCase):
         <tr><td>Tuesday</td><td>11:00 a.m</td><td>2:00 p.m</td><td>XPath</td></tr>
         <tr><td>Tuesday</td><td>11:00 a.m</td><td>2:00 p.m</td><td>XSL transformation</td></tr>
         <tr><td>Tuesday</td><td>2:00 p.m</td><td>5:00 p.m</td><td>XSL transformation</td></tr>
-        <tr><td>Wednesday</td><td>8:00 a.m</td><td>12:00 p.m</td><td>XLS Formatting Objects</td></tr></table>""".replace(" ","").replace("\n","")
-        self.assertEqual(table2dcontent,result)
+        <tr><td>Wednesday</td><td>8:00 a.m</td><td>12:00 p.m</td><td>XLS Formatting Objects</td></tr></table>""".replace(
+            " ", "").replace("\n", "")
+        self.assertEqual(table2dcontent, result)
 
     def test_interTitle(self):
-        html="""<table class="x wikitable y" border="1" cellpadding="10px" align="center"><thead>
+        html = """<table class="x wikitable y" border="1" cellpadding="10px" align="center"><thead>
         <tr><th rowspan="3">A</th><th colspan="3">B</th></tr>
         <tr><th colspan="2">C</th><th rowspan="2">F</th></tr>
         <tr><th>D</th><th>E</th></tr></thead><tbody>
@@ -107,7 +110,6 @@ class TestReadHTML(unittest.TestCase):
         <tr><td rowspan="2">5</td><td colspan="2">m</td></tr>
         <tr><td rowspan="2">n</td><td colspan="2">s</td></tr>
         <tr><td>6</td> <td>t</td></tr></tbody></table>"""
-
         soup = BeautifulSoup(html, 'html.parser')
         tables = readHTML.readTables(soup)
         lt = len(tables)
@@ -120,21 +122,22 @@ class TestReadHTML(unittest.TestCase):
         <tr><th>A</th><th>C</th><th>C</th><th>F</th></tr>
         <tr><th>A</th><th>D</th><th>E</th><th>F</th></tr>
         <tr><td>1</td><td>a</td><td>b</td><td>x</td></tr>
-        <tr><td>1</td><td>a</td><td>b</td><td>y</td></tr>        
+        <tr><td>1</td><td>a</td><td>b</td><td>y</td></tr>
         <tr><td>2</td><td>cd</td><td>cd</td><td>z</td></tr>
         <tr><td>2</td><td>e</td><td>f</td><td>z</td></tr>
         <tr><td>2</td><td>e</td><td>f</td><td>w</td></tr>
-        <tr><td>2</td><td>g</td><td>h</td><td>w</td></tr>        
+        <tr><td>2</td><td>g</td><td>h</td><td>w</td></tr>
         <tr><th>3</th><th>3</th><th>3</th><th>3</th></tr>
         <tr><td >4</td><td >ijr</td><td >ijr</td><td >ijr</td></tr>
         <tr><td >4</td><td >5</td><td >m</td><td >m</td></tr>
-        <tr><td >4</td><td >5</td><td >n</td><td >s</td></tr>        
+        <tr><td >4</td><td >5</td><td >n</td><td >s</td></tr>
         <tr><td >4</td><td >6</td><td >n</td><td >t</td></tr>
         </table>""".replace(
             " ", "").replace("\n", "")
         print(table2dcontent)
         print(result)
         self.assertEqual(table2dcontent, result)
+
 
 if __name__ == '__main__':
     unittest.main()

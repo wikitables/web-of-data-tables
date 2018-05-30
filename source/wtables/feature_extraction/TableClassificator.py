@@ -3,8 +3,8 @@
 
 from bs4 import BeautifulSoup
 import sys,os
-sys.path.insert(0, '/home/jluzuria/web-of-data-tables')
-import source.wtables.preprocessing.ReadHTML as readHTML
+# sys.path.insert(0, '/home/jluzuria/web-of-data-tables')
+import wtables.preprocessing.ReadHTML as readHTML
 import bz2
 import logging
 import traceback

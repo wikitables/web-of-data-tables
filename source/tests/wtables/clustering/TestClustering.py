@@ -1,8 +1,9 @@
-import pandas as pd
-from itertools import islice
+# -*- coding: utf-8 -*-
 import linecache
 import sys
 import time
+
+import pandas as pd
 
 class ClusterTables(object):
     def getMetric(self, epsilon, filein, fileOut):

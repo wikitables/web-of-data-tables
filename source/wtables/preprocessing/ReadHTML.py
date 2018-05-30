@@ -4,7 +4,7 @@
 from bs4 import BeautifulSoup
 from itertools import product
 import re
-from source.wtables.preprocessing.JsonArticle import Table, TableCell
+from wtables.preprocessing.JsonArticle import Table, TableCell
 
 
 def tableTo2d(table_tag):
