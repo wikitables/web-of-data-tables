@@ -2,7 +2,7 @@ import pandas as pd
 from itertools import islice
 import linecache
 import sys
-
+import time
 
 class ClusterTables(object):
     def getMetric(self, epsilon, filein, fileOut):
@@ -87,6 +87,7 @@ class ClusterTables(object):
 
 
 if __name__ == '__main__':
+    start_time = time.time()
     test = ClusterTables()
     LOG_FILENAME = 'debug.log'
     args = sys.argv[1:]
@@ -111,3 +112,5 @@ if __name__ == '__main__':
             print("numCluster", numCluster)
         else:
             print("Option not valid!. Try: [0=get scores or 1=clustering or 2=both]")
+
+    print("--- %s seconds ---" % (time.time() - start_time))
