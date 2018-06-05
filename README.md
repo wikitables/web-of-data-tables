@@ -35,6 +35,8 @@ This repository contains documentation and code related to the extraction of tri
   http://aclweb.org/anthology/D17-1160
 - Dresden Web Table Corpus (DWTC)
   https://wwwdb.inf.tu-dresden.de/research-projects/dresden-web-table-corpus/
+- IDEL: In-Database Entity Linking with Neural Embeddings
+  https://www.researchgate.net/publication/323746967_IDEL_In-Database_Entity_Linking_with_Neural_Embeddings
 
 ## Programming
 
