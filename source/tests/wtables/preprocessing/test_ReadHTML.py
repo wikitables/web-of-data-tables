@@ -9,7 +9,6 @@ from wtables.preprocessing import ReadHTML as readHTML
 
 
 class TestReadHTML(unittest.TestCase):
-
     @pytest.mark.skip
     def test_rowspan(self):
         html = """<table border="1" class="wikitable"><tr><td>1</td>
@@ -20,7 +19,7 @@ class TestReadHTML(unittest.TestCase):
         <tr><td colspan="3">14,15 and 16</td></tr>
         </table>"""
         soup = BeautifulSoup(html, 'html.parser')
-        table2d, object = readHTML.tableTo2d(soup)
+        table2d, object = readHTML.tableTo2d(soup, 1)
         self.assertFalse(table2d is None)
         table2dcontent = table2d.replace(" ", "").replace("\n", "")
         result = """<table ><tr><td>1</td>
@@ -38,7 +37,7 @@ class TestReadHTML(unittest.TestCase):
         <tr><td>4</td><td>5</td><td>6</td></tr>
         </table>"""
         soup = BeautifulSoup(html, 'html.parser')
-        table2d, object = readHTML.tableTo2d(soup)
+        table2d, object = readHTML.tableTo2d(soup, 1)
         self.assertFalse(table2d is None)
         table2dcontent = table2d.replace(" ", "").replace("\n", "")
         result = """<table>
@@ -77,7 +76,7 @@ class TestReadHTML(unittest.TestCase):
         tables = readHTML.readTables(soup)
         lt = len(tables)
         self.assertEqual(lt, 1)
-        table2d, tableObject = readHTML.tableTo2d(tables[0])
+        table2d, tableObject = readHTML.tableTo2d(tables[0], 1)
         self.assertFalse(table2d is None)
         table2dcontent = table2d.replace(" ", "").replace("\n", "")
         result = """<table>
@@ -114,7 +113,7 @@ class TestReadHTML(unittest.TestCase):
         tables = readHTML.readTables(soup)
         lt = len(tables)
         self.assertEqual(lt, 1)
-        table2d, object = readHTML.tableTo2d(tables[0])
+        table2d, object = readHTML.tableTo2d(tables[0], 1)
         self.assertFalse(table2d is None)
         table2dcontent = table2d.replace(" ", "").replace("\n", "")
         result = """<table>
@@ -137,7 +136,6 @@ class TestReadHTML(unittest.TestCase):
         print(table2dcontent)
         print(result)
         self.assertEqual(table2dcontent, result)
-
 
 if __name__ == '__main__':
     unittest.main()

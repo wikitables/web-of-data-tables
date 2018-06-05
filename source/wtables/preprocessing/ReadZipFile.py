@@ -11,10 +11,10 @@ def readFile(path):
     title=readHTML.readTitle(soup)
     tables = readHTML.readTables(soup)
     tables2d=[]
-    for t in tables:
-        html,t2d=readHTML.tableTo2d(t)
+    for i,t in enumerate(tables):
+        html,t2d=readHTML.tableTo2d(t,i)
         tables2d.append(t2d)
-    article = Article(title,tables2d)
+    article = Article(1,title,tables2d)
     writeArticle(article)
 
 

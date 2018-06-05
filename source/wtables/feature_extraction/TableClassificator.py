@@ -9,6 +9,7 @@ import bz2
 import logging
 import traceback
 import re
+from wtables.preprocessing.JsonArticle import *
 
 class TableClassificator(object):
 
@@ -34,6 +35,7 @@ class TableClassificator(object):
                 +"smallDimTables" + "\t"
              + "otherTables" + "\t" + "usefulTables" + "\t" + "wikiTables" + "\n").encode("utf8"))
         cont=1
+        otherClases={}
         try:
             for subdir, dirs, files in os.walk(pathZip):
                 for filename in files:
@@ -55,8 +57,10 @@ class TableClassificator(object):
                         soup = BeautifulSoup(bzFile.read(), 'html.parser')
                         title = readHTML.readTitle(soup)
                         tables = readHTML.readTables(soup)
+                        tables2d=[]
+                        contTables=1
                         for t in tables:
-                            html, t2d = readHTML.tableTo2d(t)
+                            html, t2d = readHTML.tableTo2d(t,str(cont)+"."+str(contTables))
                             if t2d is None:
                                 notWellFormedTables += 1
                                 continue
@@ -75,9 +79,11 @@ class TableClassificator(object):
                                 infoboxTables += 1
                                 continue
                             if (tclass == "navbox"
-                                or "metadata" in tclass
-                                or "maptable" in tclass
-                                or "vcard" in tclass):
+                                or "navbox" in tclass.lower()
+                                or "metadata" in tclass.lower()
+                                or "maptable" in tclass.lower()
+                                or "vcard" in tclass.lower()
+                                or "mbox" in tclass.lower()):
                                 otherTables += 1
                                 continue
 
@@ -91,27 +97,47 @@ class TableClassificator(object):
                                 continue
                             if (cols >= 2 and rows >= 2):
                                 usefulTables += 1
+
                                 if (tclass == "wikitable"
                                     or "wikitable" in tclass):
                                     wikiTables += 1
-                                    stringHeaders = ""
-                                    headers=readHTML.readHeaders(t)
-                                    for h in headers:
-                                        h = h.replace('\t', "")
-                                        h = re.sub('\W+',' ', h)
-                                        if h!="" and h!=" ":
-                                            stringHeaders += h + ","
-                                    if stringHeaders!="":
-                                        headersFile.write((str(cont)+"\t"+filename + "\t"+title + "\t" + stringHeaders + "\n").encode("utf8"))
+                                else:
+                                    if otherClases.get(tclass) is None:
+                                        otherClases[tclass]=1
+                                    else:
+                                        val=otherClases.get(tclass)
+                                        val=int(val)+1
+                                        otherClases[tclass]=val
+                                stringHeaders = ""
+                                headers = readHTML.readHeaders(t)
+                                for h in headers:
+                                    h = h.replace('\t', "")
+                                    h = re.sub('\W+', ' ', h)
+                                    if h != "" and h != " ":
+                                        stringHeaders += h.strip() + ","
+                                if stringHeaders != "":
+                                    headersFile.write((str(
+                                        cont) + "\t" + filename + "\t" + title + "\t" + stringHeaders + "\n").encode(
+                                        "utf8"))
+                                tables2d.append(t2d)
                                 continue
                             otherTables += 1
+                            contTables+=1
 
                         classFile.write((str(cont)+"\t"+filename + "\t"+title + "\t" + str(len(tables)) + "\t" + str(wellFormedTables) + "\t"
                                  + str(notWellFormedTables) + "\t" + str(tocTables) + "\t" + str(infoboxTables) + "\t" + str(
                                     smallDimTables) + "\t"
                                  + str(otherTables) + "\t" + str(usefulTables) + "\t" + str(wikiTables) + "\n").encode("utf8"))
+                        if len(tables2d)>0:
+                            article = Article(articleId=str(cont), title=title, tables=tables2d)
+                            f = open(pathOutput + "/" + str(cont) + ".json", "w")
+                            f.write(json.dumps(article.reprJSON(), cls=ComplexEncoder, skipkeys=True))
+                            f.close()
                         cont+=1
+
+
                     except Exception as ex:
+                        print(filename)
                         logging.debug(ex)
                         try:
                             filesNoProcessed.write(filename+"\n")
@@ -126,6 +152,13 @@ class TableClassificator(object):
             headersFile.close()
             filesNoProcessed.close()
 
+        print("otherClases:",otherClases)
+
+
 
 if __name__ == '__main__':
     TableClassificator().classify()
+
+
+
+
