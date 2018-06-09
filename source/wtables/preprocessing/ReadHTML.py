@@ -167,6 +167,8 @@ def readHeaders(tableSoup):
     for r, row in enumerate(rows):
         headers = row.find_all(['th'], recursive=False)
         for h in headers:
-            tableHeaders.append(h.get_text())
+            text=h.get_text()
+            if text!=None and text!="":
+                tableHeaders.append(h.get_text())
     return tableHeaders
 

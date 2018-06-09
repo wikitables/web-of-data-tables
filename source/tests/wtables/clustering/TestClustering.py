@@ -18,6 +18,22 @@ from itertools import islice
 
 class ClusterTables(object):
 
+    def countHeaders(self,  filein, fileOut):
+        fileOut=open(fileOut, "w")
+        fileOut.write("header" + "\t" + "count" + "\n")
+        dictHeaders={}
+        with open(filein) as infile:
+                for line in infile:
+                    line = line.replace("\n", "")
+                    if (dictHeaders.get(line) == None):
+                            dictHeaders[line] = 1
+                    else:
+                            dictHeaders[line] = dictHeaders.get(line) + 1
+
+        for key, value in dictHeaders.items():
+            fileOut.write(str(key) + "\t" + str(value) + "\n")
+        fileOut.close()
+
     def getMetric1(self,  filein, fileOut, epsilon=0.2):
         fileOut=open(fileOut, "w")
         fileOut.write("table1" + "\t" + "table2" + "\t" + "score" + "\n")
@@ -156,21 +172,22 @@ if __name__ == '__main__':
     LOG_FILENAME = 'debug.log'
     args = sys.argv[1:]
 
-    if (len(args) != 2):
+    if (len(args) != 1):
         print(
-            "Use params <folder> and <option[1=scores, 2=clustering]>. Folder has to contain headersFile.out")
+            "Use params <folder>. Folder has to contain headersFile.out")
     else:
         folderWork = args[0]  # "/home/jhomara/Desktop/headersFile.csv"
-        scores = args[0] + "/scores.csv"  # "/home/jhomara/Desktop/decompress/scores.csv"
-        option = args[1]
+        scores = args[0] + "/headersCount.csv"  # "/home/jhomara/Desktop/decompress/scores.csv"
+
         # fileout = open(scores, "w")
         try:
             #manager = Manager()
             #tmp = tempfile.mkdtemp()
             #listTabletmp = os.path.join(tmp, 'listTabletmp')
             try:
-                if option == "1":
-                    test.getMetric1(folderWork + "/headersFile.out", scores)
+                #if option == "1":
+                    #test.getMetric1(folderWork + "/headersFile.out", scores)
+                test.countHeaders(folderWork + "/headersFile.out", scores)
                     #dump(open(folderWork + "/headersFile.out", "r").readlines(), listTabletmp)
                     #listTables = load(listTabletmp, mmap_mode='r')
                     #m = multiprocessing.Manager()
@@ -182,20 +199,20 @@ if __name__ == '__main__':
                     #writer_process = multiprocessing.Process(target=Writer, args=(scores, queue, "STOP"))
                     #writer_process.start()
                     #writer_process.join()
-                else:
-                    if option == "2":
-                        scoresFile = Path(scores)
-                        fout = open(folderWork + "/clusters.csv", "w")
-                        fout.write("cluster" + "\t" + "item" + "\n")
-                        if scoresFile.exists():
-                            numCluster, listCluster = test.dbscan(2, scores)
-                            for key, value in listCluster.items():
-                                fout.write(str(value) + "\t" + str(key) + "\n")
-                            fout.close()
-                        else:
-                            print("Folder %s doesn't contain scores.csv file" % (folderWork))
-                    else:
-                        print("Option not valid. Use 1=scores or 2=clustering")
+                #else:
+                    #if option == "2":
+                    #    scoresFile = Path(scores)
+                    #    fout = open(folderWork + "/clusters.csv", "w")
+                    #    fout.write("cluster" + "\t" + "item" + "\n")
+                    #    if scoresFile.exists():
+                    #        numCluster, listCluster = test.dbscan(2, scores)
+                    #        for key, value in listCluster.items():
+                    #            fout.write(str(value) + "\t" + str(key) + "\n")
+                    #        fout.close()
+                    #    else:
+                    #        print("Folder %s doesn't contain scores.csv file" % (folderWork))
+                    #else:
+                    #    print("Option not valid. Use 1=scores or 2=clustering")
             except IOError:
                 traceback.print_exc()
                 print("Folder %s doesn't contain headersFile.out file" % (folderWork))
