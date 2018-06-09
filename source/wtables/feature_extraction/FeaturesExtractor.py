@@ -10,48 +10,50 @@ import bz2
 import wtables.preprocessing.ReadHTML as readHTML
 import multiprocessing
 
-class FeaturesExtractor(object):
 
-    def isValid(self, t):
-        html, t2d = readHTML.tableTo2d(t, str(0))
-        if html == "error":
-            return False
-        if t2d is None:
-            return False
+def isValid(t):
+    html, t2d = readHTML.tableTo2d(t, str(0))
+    if html == "error":
+        return False
+    if t2d is None:
+        return False
 
-        if(len(t2d.cells)==0):
-            return False
+    if (len(t2d.cells) == 0):
+        return False
 
-        rows, cols = len(t2d.cells), len(t2d.cells[0])
-        if t2d.getAttr("class") is None:
-            if (cols < 2 or rows < 2):
-                return False
-            else:
-                return True
-
-        tclass = str(t2d.getAttr("class"))
-        tclass = re.sub('\W+', " ", tclass)
-        if ((tclass.lower() == "infobox")
-            or ("infobox" in tclass.lower())):
-            return False
-        if (tclass == "box"
-            or "box" in tclass.lower()
-            or "metadata" in tclass.lower()
-            or "maptable" in tclass.lower()
-            or "vcard" in tclass.lower()):
-            return False
-
+    rows, cols = len(t2d.cells), len(t2d.cells[0])
+    if t2d.getAttr("class") is None:
         if (cols < 2 or rows < 2):
             return False
         else:
-            splitClass = tclass.split()
-            for cl in splitClass:
-                if cl.strip().startswith("toc"):
-                    return False
-            else:
-                return True
+            return True
 
-    def extractHeaders(self, filename, queue, pathInnerTables):
+    tclass = str(t2d.getAttr("class"))
+    tclass = re.sub('\W+', " ", tclass)
+    if ((tclass.lower() == "infobox")
+        or ("infobox" in tclass.lower())):
+        return False
+    if (tclass == "box"
+        or "box" in tclass.lower()
+        or "metadata" in tclass.lower()
+        or "maptable" in tclass.lower()
+        or "vcard" in tclass.lower()):
+        return False
+
+    if (cols < 2 or rows < 2):
+        return False
+    else:
+        splitClass = tclass.split()
+        for cl in splitClass:
+            if cl.strip().startswith("toc"):
+                return False
+        else:
+            return True
+
+
+def extractHeaders(filename, cont, queue):
+    print("Procesing: ", cont)
+    try:
         file, file_extension = os.path.splitext(filename)
         if "bz2" not in file_extension:
             return
@@ -60,14 +62,14 @@ class FeaturesExtractor(object):
         tables = readHTML.readTables(soup)
         for contTables, t in enumerate(tables):
             if len(t.find_parents("table")) == 0:
-                if (self.isValid(t)):
+                if (isValid(t)):
                     headers = readHTML.readHeaders(soup)
                     headers = [re.sub('\W+', " ", h) for h in headers]
                     headers = [h.strip() for h in headers]
-                    if len(headers)>0:
-                        queue.put(",".join(headers)+"\n")
-
-
+                    if len(headers) > 0:
+                        queue.put(",".join(headers) + "\n")
+    except Exception as ex:
+        traceback.print_exc()
 
 
 def Writer(dest_filename, queue, stop_token):
@@ -81,6 +83,7 @@ def Writer(dest_filename, queue, stop_token):
             except:
                 continue
 
+
 if __name__ == '__main__':
     LOG_FILENAME = 'debug.log'
     args = sys.argv[1:]
@@ -89,7 +92,6 @@ if __name__ == '__main__':
         print("Use params <path> folder html files and <pathOutputFolder>")
     else:
         manager = Manager()
-        fe=FeaturesExtractor()
         pathZip = args[0]
         pathOutput = args[1]
 
@@ -101,13 +103,14 @@ if __name__ == '__main__':
         try:
             for subdir, dirs, files in os.walk(pathZip):
                 Parallel(n_jobs=4, backend="multiprocessing")(
-                    delayed(fe.extractHeaders)((pathZip + "/" + fileName), queue,pathOutput) for fileName in files)
+                    delayed(extractHeaders)((pathZip + "/" + fileName), cont, queue) for cont, fileName in
+                    enumerate(files))
 
-                queue.put("STOP")
-                writer_process = multiprocessing.Process(target=Writer,
-                                                         args=(pathOutput + "/headersFile.out", queue, "STOP"))
-                writer_process.start()
-                writer_process.join()
+            queue.put("STOP")
+            writer_process = multiprocessing.Process(target=Writer,
+                                                     args=(pathOutput + "/headersFile.out", queue, "STOP"))
+            writer_process.start()
+            writer_process.join()
 
         except:
             traceback.print_exc()
