@@ -39,6 +39,8 @@ This repository contains documentation and code related to the extraction of tri
   https://www.researchgate.net/publication/323746967_IDEL_In-Database_Entity_Linking_with_Neural_Embeddings
 - Web-Scale Web Table to Knowledge Base Matching
   https://ub-madoc.bib.uni-mannheim.de/43123/1/thesis.pdf
+- Leveraging Wikipedia Table Schemas for Knowledge Graph Augmentation
+  https://dl.acm.org/citation.cfm?id=3201468
 
 ## Programming
 
