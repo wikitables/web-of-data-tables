@@ -162,6 +162,7 @@ def Writer(dest_filename, queue, some_stop_token):
             try:
                 dest_file.write(line)
             except:
+                traceback.print_exc()
                 continue
 
 

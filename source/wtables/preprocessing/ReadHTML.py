@@ -146,7 +146,7 @@ def tableTo2d(table_tag,id):
                     newTable += tableHtml[r][c]
             newTable += "</tr>"
         newTable+="</table>"
-        tableObject=Table(tableId=id,title=tableName, cells=table,attrs=tableAttr)
+        tableObject=Table(tableId=id,title=tableName, cells=table,attrs=tableAttr, html=str(table_tag))
         #Return clean matrix html (newTable) and Table as object with attr.
         return newTable, tableObject
     except Exception as ex:
@@ -165,7 +165,7 @@ def readHeaders(tableSoup):
     rows = tableSoup.findChildren(['tr'])
     tableHeaders = []
     for r, row in enumerate(rows):
-        headers = row.find_all(['th'], recursive=False)
+        headers = row.find_all(['th'])
         for h in headers:
             text=h.get_text()
             if text!=None and text!="":

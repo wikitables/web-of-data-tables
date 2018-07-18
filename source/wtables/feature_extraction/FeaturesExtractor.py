@@ -9,12 +9,10 @@ import io
 import bz2
 import wtables.preprocessing.ReadHTML as readHTML
 import multiprocessing
+from wtables.preprocessing.JsonArticle import *
 
+def isValid(t2d):
 
-def isValid(t):
-    html, t2d = readHTML.tableTo2d(t, str(0))
-    if html == "error":
-        return False
     if t2d is None:
         return False
 
@@ -50,24 +48,47 @@ def isValid(t):
         else:
             return True
 
+def cleanHeader(text):
+    text = re.sub("[\(\[].*?[\)\]]", "", text)
+    text = text.replace("\t", " ")
+    text = text.replace("\n", " ")
+    text = re.sub("\W(?:['])?\W", " ", text)
+    text = text.replace(","," ")
+    text = text.replace(".", " ")
+    return text
 
-def extractHeaders(filename, cont, queue):
-    print("Procesing: ", cont)
+def extractHeaders(pathZip,filename, cont, queue):
+    print("[Worker %d] File numer %d" % (os.getpid(), cont))
+    filenamecomplete=pathZip+"/"+filename
     try:
         file, file_extension = os.path.splitext(filename)
         if "bz2" not in file_extension:
             return
-        bzFile = bz2.BZ2File(filename, "rb")
+        bzFile = bz2.BZ2File(filenamecomplete, "rb")
         soup = BeautifulSoup(bzFile.read(), 'html.parser')
+        title= readHTML.readTitle(soup)
         tables = readHTML.readTables(soup)
-        for contTables, t in enumerate(tables):
-            if len(t.find_parents("table")) == 0:
-                if (isValid(t)):
-                    headers = readHTML.readHeaders(soup)
-                    headers = [re.sub('\W+', " ", h) for h in headers]
-                    headers = [h.strip() for h in headers]
-                    if len(headers) > 0:
-                        queue.put(",".join(headers) + "\n")
+        tables2d=[]
+        contTables=1
+        for t in tables:
+            html, t2d = readHTML.tableTo2d(t, str(cont)+"."+str(contTables))
+            if html == "error":
+                continue
+            if (isValid(t2d)):
+                headers = t2d.getHeadersText()
+                headers = [cleanHeader(h) for h in headers]
+                headers = [h.strip().lower() for h in headers if h!=""]
+                headers = set(headers)
+                headers=list(headers)
+                headers.sort()
+                if len(headers) > 0:
+                    queue.put(str(cont)+"\t"+filename+"\t"+title+"\t"+str(cont)+"."+str(contTables)+"\t"+",".join(headers) + "\n")
+                tables2d.append(t2d)
+                contTables+=1
+        article = Article(articleId=str(cont), title=title, tables=tables2d)
+        f = open(pathOutput + "/" + str(cont) + ".json", "w")
+        f.write(json.dumps(article.reprJSON(), cls=ComplexEncoder, skipkeys=True))
+        f.close()
     except Exception as ex:
         traceback.print_exc()
 
@@ -81,6 +102,7 @@ def Writer(dest_filename, queue, stop_token):
             try:
                 dest_file.write(line)
             except:
+                traceback.print_exc()
                 continue
 
 
@@ -95,15 +117,14 @@ if __name__ == '__main__':
         pathZip = args[0]
         pathOutput = args[1]
 
-        headersFile = open(pathOutput + "/headersFile.out", "w", encoding="utf-8")
-
         queue = manager.Queue()
         logging.basicConfig(filename=pathOutput + "/" + LOG_FILENAME, level=logging.DEBUG)
 
         try:
-            for subdir, dirs, files in os.walk(pathZip):
-                Parallel(n_jobs=4, backend="multiprocessing")(
-                    delayed(extractHeaders)((pathZip + "/" + fileName), cont, queue) for cont, fileName in
+            #for subdir, dirs, files in os.walk(pathZip):
+            files=os.listdir(pathZip)
+            Parallel(n_jobs=8, backend="multiprocessing")(
+                    delayed(extractHeaders)(pathZip,fileName, cont, queue) for cont, fileName in
                     enumerate(files))
 
             queue.put("STOP")

@@ -12,11 +12,12 @@ class Article(object):
 
 
 class Table(object):
-    def __init__(self,tableId, title, cells,attrs):
+    def __init__(self,tableId, title, cells,attrs, html):
         self.tableId=tableId
         self.title=title
         self.cells=cells
         self.attrs = attrs
+        self.html=html
 
     def getHeadersText(self):
         headers=[]
@@ -37,7 +38,7 @@ class Table(object):
     def getCell(self, row, col):
         return self.cells[row][col]
 
-    def getHTML(self):
+    def getHTMLMatrix(self):
         html = "<table>"
         for i in range(len(self.cells)):
             html += "<tr>"
@@ -55,7 +56,7 @@ class Table(object):
 
 
     def reprJSON(self):
-        return dict(tableId=self.tableId,title=self.title, cells=self.cells,attrs=self.attrs)
+        return dict(tableId=self.tableId,title=self.title, html=self.html)
 
 
 
