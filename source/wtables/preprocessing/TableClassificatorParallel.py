@@ -6,7 +6,7 @@ import wtables.preprocessing.ReadHTML as readHTML
 import bz2
 import logging
 import traceback
-from wtables.preprocessing.JsonArticle import *
+from wtables.schema.Article import *
 from joblib import Parallel, delayed
 import multiprocessing
 import io

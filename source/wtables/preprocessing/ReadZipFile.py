@@ -1,7 +1,6 @@
 import bz2
-from bs4 import BeautifulSoup
 from wtables.preprocessing import ReadHTML as readHTML
-from wtables.preprocessing.JsonArticle import *
+from wtables.schema.Article import *
 import json
 
 
