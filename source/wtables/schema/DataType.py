@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import re
 import enum
 from bs4 import BeautifulSoup
@@ -16,9 +18,10 @@ def getDataType(data):
         return None
     value = data.replace("[", "").replace("]", "").replace("(", "").replace(")", "").replace("─","-")
 
-    if "-" in value or "/" in value:
+    if "-" in value or "/" in value or "–" in value:
+        vdate=value.replace("–","-")
         try:
-            if len(value.split("-"))>2 or len(value.split("/"))>2:
+            if len(vdate.split("-"))>2 or len(vdate.split("/"))>2:
                 try:
                     vdate = parse(value).strftime("%Y%m%d")
                     if vdate != None:
@@ -26,7 +29,7 @@ def getDataType(data):
                 except:
                     pass
             else:
-                vdate=value.replace(" ","")
+                vdate=vdate.replace(" ","")
                 date=re.match(r'^[\d]{2}(\-)?(/)?[\d]{4}$', vdate)
                 if date==None:
                     date = re.match(r'^[\d]{4}(-)?(/)?[\d]{2}$', vdate)
@@ -72,17 +75,38 @@ def getDataType(data):
 
     return DataType.string.value
 
-def test():
-    print(getDataType("dadad"))
-    print(getDataType("afsdf $4.5 dadad"))
-    print(getDataType("4.5 dadad"))
-    print(getDataType("4."))
-    print("4000 ",getDataType("% 4,000 $"))
-    print(getDataType("% 45 $ 244,500"))
-    print(getDataType(" 45  244,500 454.111"))
-    print(" 45,00 ",getDataType(" 45,000.0 "))
-    print(getDataType(" 5,454,454.454"))
-    print(getDataType(" fsdfsd # 553 @"))
-    print(getDataType(" %  / & * 553.55 "))
-    print(" 1 ", getDataType("10─jan"))
-#test()
+if __name__ == '__main__':
+    type=getDataType("dadad")
+    assert type == DataType.string.value
+    type = getDataType("afsdf $4.5 dadad")
+    assert type == DataType.string.value
+    type = getDataType("4.5 dadad")
+    assert type == DataType.string.value
+    type = getDataType("4.")
+    assert type == DataType.numeric.value
+    type = getDataType("% 4,000 $")
+    assert type == DataType.numeric.value
+    type = getDataType("% 45 $ 244,500")
+    assert type == DataType.numeric.value
+    type = getDataType(" 45  244,500 454.111")
+    assert type == DataType.numeric.value
+    type = getDataType(" 45,000.0 ")
+    assert type == DataType.numeric.value
+    type = getDataType(" 5,454,454.454")
+    assert type == DataType.numeric.value
+    type = getDataType(" %  / & * 553.55 ")
+    assert type == DataType.numeric.value
+    type = getDataType("10─jan")
+    assert type == DataType.date.value
+    type = getDataType("10─2015")
+    assert type == DataType.date.value
+    type = getDataType("1999─2015")
+    assert type == DataType.date.value
+    type = getDataType("15 january 2010")
+    assert type == DataType.date.value
+    type = getDataType("january 15 2010")
+    assert type == DataType.date.value
+    type = getDataType("1900–01")
+    assert type == DataType.date.value
+    type = getDataType("1900-01")
+    assert type == DataType.date.value

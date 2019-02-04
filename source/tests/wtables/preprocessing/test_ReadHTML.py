@@ -11,14 +11,15 @@ from wtables.preprocessing import ReadHTML as readHTML
 class TestReadHTML(unittest.TestCase):
 
     def test_rowspan(self):
-        html = """<table border="1" class="wikitable"><tr><td>1</td>
+        html = """<html><body><table border="1" class="wikitable"><tr><td>1</td>
         <td colspan="2">2 and 3</td><td>4</td></tr>
         <tr><td rowspan="3">5,9 and 13</td>
         <td>6</td><td>7</td><td>8</td></tr>
         <tr><td>10</td><td>11</td><td>12</td></tr>
         <tr><td colspan="3">14,15 and 16</td></tr>
-        </table>"""
+        </table></body></html>"""
         soup = BeautifulSoup(html, 'html.parser')
+        soup=readHTML.readTables(soup)[0]
         listt= readHTML.tableTo2d(soup)
         table2d=listt[0]
         table2d = table2d.toHTML()
@@ -31,9 +32,9 @@ class TestReadHTML(unittest.TestCase):
                 <tr><td>5,9 and 13</td><td>10</td><td>11</td><td>12</td></tr>
                 <tr><td>5,9 and 13</td><td>14,15 and 16</td><td>14,15 and 16</td><td>14,15 and 16</td></tr>
                 </table>""".replace(" ", "").replace("\n", "")
-        resultSoup=BeautifulSoup(table2d,"html.parser")
-        resultSoup=readHTML.removeSpanAttrs(resultSoup)
-        resultSoup = str(resultSoup).replace(" ", "").replace("\n", "")
+        #resultSoup=BeautifulSoup(table2d,"html.parser")
+        #resultSoup=readHTML.removeSpanAttrs(resultSoup)
+        resultSoup = str(table2d).replace(" ", "").replace("\n", "")
         self.assertEqual(resultSoup,result)
 
 
@@ -43,7 +44,7 @@ class TestReadHTML(unittest.TestCase):
         <tr><td>4</td><td>5</td><td>6</td></tr>
         </table>"""
         soup = BeautifulSoup(html, 'html.parser')
-        listt = readHTML.tableTo2d(soup)
+        listt = readHTML.tableTo2d(readHTML.readTables(soup)[0])
         table2d = listt[0]
         table2d=table2d.toHTML()
         self.assertFalse(table2d is None)
@@ -85,7 +86,7 @@ class TestReadHTML(unittest.TestCase):
         tables = readHTML.readTables(soup)
         lt = len(tables)
         self.assertEqual(lt, 1)
-        listt = readHTML.tableTo2d(soup)
+        listt = readHTML.tableTo2d(tables[0])
         table2d = listt[0]
         table2d = table2d.toHTML()
         self.assertFalse(table2d is None)
@@ -184,7 +185,7 @@ class TestReadHTML(unittest.TestCase):
         tables = readHTML.readTables(soup)
         lt = len(tables)
         self.assertEqual(lt, 1)
-        listt = readHTML.tableTo2d(soup)
+        listt = readHTML.tableTo2d(tables[0])
         table2d = listt[0]
         table2d=table2d.toHTML()
         self.assertFalse(table2d is None)
@@ -211,7 +212,7 @@ class TestReadHTML(unittest.TestCase):
         self.assertEqual(table2dcontent, result)
 
     def testCaption(self):
-        html = """<table class="wikitable" style="text-align: center;float:right;">
+        html = """<html><body><table class="wikitable" style="text-align: center;float:right;">
         <caption>Irish stadiums in 1999 World Cup</caption><tbody><tr>
         <td><b>City</b></td><td><b>Stadium</b></td><td><b>Capacity</b>
         </td></tr><tr><td><span class="flagicon"><a href="/wiki/Republic_of_Ireland" title="Republic of Ireland"><img alt="Republic of Ireland" src="//upload.wikimedia.org/wikipedia/commons/thumb/4/45/Flag_of_Ireland.svg/23px-Flag_of_Ireland.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/commons/thumb/4/45/Flag_of_Ireland.svg/35px-Flag_of_Ireland.svg.png 1.5x, //upload.wikimedia.org/wikipedia/commons/thumb/4/45/Flag_of_Ireland.svg/46px-Flag_of_Ireland.svg.png 2x" data-file-width="1200" data-file-height="600" width="23" height="12"></a></span> <a href="/wiki/Dublin" title="Dublin">Dublin</a></td>
@@ -220,10 +221,10 @@ class TestReadHTML(unittest.TestCase):
         <td><a href="/wiki/Thomond_Park" title="Thomond Park">Thomond Park</a></td>
         <td>13,500</td></tr><tr><td><span class="flagicon"><a href="/wiki/United_Kingdom" title="United Kingdom"><img alt="United Kingdom" src="//upload.wikimedia.org/wikipedia/en/thumb/a/ae/Flag_of_the_United_Kingdom.svg/23px-Flag_of_the_United_Kingdom.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/a/ae/Flag_of_the_United_Kingdom.svg/35px-Flag_of_the_United_Kingdom.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/a/ae/Flag_of_the_United_Kingdom.svg/46px-Flag_of_the_United_Kingdom.svg.png 2x" data-file-width="1200" data-file-height="600" width="23" height="12"></a></span>  <a href="/wiki/Belfast" title="Belfast">Belfast</a></td>
         <td><a href="/wiki/Ravenhill_Stadium" class="mw-redirect" title="Ravenhill Stadium">Ravenhill Stadium</a></td>
-        <td>12,500</td></tr></tbody></table>"""
+        <td>12,500</td></tr></tbody></table><html><body>"""
         soup = BeautifulSoup(html, 'html.parser')
         tables = readHTML.readTables(soup)
-        listt = readHTML.tableTo2d(soup)
+        listt = readHTML.tableTo2d(tables[0])
         table2d = listt[0]
         headers = readHTML.getMainColHeaders(table2d.htmlMatrix)
         self.assertFalse(table2d is None)
@@ -236,264 +237,76 @@ class TestReadHTML(unittest.TestCase):
             </td><td>1</td><td>0</td><td><b>1</b></td></tr></tbody><tfoot></tfoot></table>"""
         soup = BeautifulSoup(html, 'html.parser')
         tables = readHTML.readTables(soup)
-        listt = readHTML.tableTo2d(soup)
+        listt = readHTML.tableTo2d(tables[0])
         table2d = listt[0]
         headers = readHTML.getMainColHeaders(table2d.htmlMatrix)
 
     def testHeadersMix(self):
-        html="""<table border="0">
-
-<tbody><tr>
-<td style="background-color:#FFFFFF;vertical-align:top;" width="48%">
-<table cellspacing="0" cellpadding="2" border="0">
-
-
-<tbody><tr style="background-color:#AAD0FF">
-<th width="1%">No.
+        html="""
+        <table class="wikitable sortable jquery-tablesorter">
+<caption><big>Land surface elevation extremes by country</big><br><br>
+</caption>
+<thead><tr>
+<th width="256px" class="headerSort" tabindex="0" role="columnheader button" title="Sort ascending">Country or region
 </th>
-<th width="1%">
+<th width="256px" class="headerSort" tabindex="0" role="columnheader button" title="Sort ascending">Highest point
 </th>
-<th width="1%">Position
+<th width="84px" class="headerSort" tabindex="0" role="columnheader button" title="Sort ascending">Maximum elevation
 </th>
-<th width="75%">Player
-</th></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">1
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Goalkeeper_(association_football)" title="Goalkeeper (association football)">GK</a>
-</td>
-<td><span class="fn"><a href="/wiki/Andreas_Isaksson" title="Andreas Isaksson">Andreas Isaksson</a></span> <i>(<a href="/wiki/Captain_(association_football)" title="Captain (association football)">vice-captain</a>)</i>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">2
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Defender_(association_football)" title="Defender (association football)">DF</a>
-</td>
-<td><span class="fn"><a href="/wiki/Johan_Andersson_(footballer,_born_1995)" title="Johan Andersson (footballer, born 1995)">Johan Andersson</a></span>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">3
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Defender_(association_football)" title="Defender (association football)">DF</a>
-</td>
-<td><span class="fn"><a href="/wiki/Marcus_Danielson" title="Marcus Danielson">Marcus Danielson</a></span>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">4
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Defender_(association_football)" title="Defender (association football)">DF</a>
-</td>
-<td><span class="fn"><a href="/wiki/Jacob_Une_Larsson" title="Jacob Une Larsson">Jacob Une Larsson</a></span>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">5
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Norway" title="Norway"><img alt="Norway" src="//upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Flag_of_Norway.svg/21px-Flag_of_Norway.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Flag_of_Norway.svg/32px-Flag_of_Norway.svg.png 1.5x, //upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Flag_of_Norway.svg/41px-Flag_of_Norway.svg.png 2x" data-file-width="1100" data-file-height="800" width="21" height="15"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Defender_(association_football)" title="Defender (association football)">DF</a>
-</td>
-<td><span class="fn"><a href="/wiki/Niklas_Gunnarsson" title="Niklas Gunnarsson">Niklas Gunnarsson</a></span>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">6
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Midfielder" title="Midfielder">MF</a>
-</td>
-<td><span class="fn"><a href="/wiki/Jesper_Karlstr%C3%B6m" title="Jesper Karlström">Jesper Karlström</a></span>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">7
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Midfielder" title="Midfielder">MF</a>
-</td>
-<td><span class="fn"><a href="/wiki/D%C5%BEenis_Kozica" title="Dženis Kozica">Dženis Kozica</a></span>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">8
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Midfielder" title="Midfielder">MF</a>
-</td>
-<td><span class="fn"><a href="/wiki/Kevin_Walker_(Swedish_footballer)" title="Kevin Walker (Swedish footballer)">Kevin Walker</a></span>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">9
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Bosnia_and_Herzegovina" title="Bosnia and Herzegovina"><img alt="Bosnia and Herzegovina" src="//upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Flag_of_Bosnia_and_Herzegovina.svg/23px-Flag_of_Bosnia_and_Herzegovina.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Flag_of_Bosnia_and_Herzegovina.svg/35px-Flag_of_Bosnia_and_Herzegovina.svg.png 1.5x, //upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Flag_of_Bosnia_and_Herzegovina.svg/46px-Flag_of_Bosnia_and_Herzegovina.svg.png 2x" data-file-width="800" data-file-height="400" width="23" height="12"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Midfielder" title="Midfielder">MF</a>
-</td>
-<td><span class="fn"><a href="/wiki/Haris_Radetinac" title="Haris Radetinac">Haris Radetinac</a></span>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">10
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Forward_(association_football)" title="Forward (association football)">FW</a>
-</td>
-<td><span class="fn"><a href="/wiki/Kerim_Mrabti" title="Kerim Mrabti">Kerim Mrabti</a></span>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">11
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Midfielder" title="Midfielder">MF</a>
-</td>
-<td><span class="fn"><a href="/wiki/Jonathan_Ring" title="Jonathan Ring">Jonathan Ring</a></span>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">12
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Forward_(association_football)" title="Forward (association football)">FW</a>
-</td>
-<td><span class="fn"><a href="/wiki/Omar_Eddahri" title="Omar Eddahri">Omar Eddahri</a></span>
-</td></tr></tbody></table>
-</td>
-<td width="1%">
-</td>
-<td style="background-color:#FFFFFF;vertical-align:top;" width="48%">
-<table cellspacing="0" cellpadding="2" border="0">
-
-
-<tbody><tr style="background-color:#AAD0FF">
-<th width="1%">No.
+<th width="256px" class="headerSort" tabindex="0" role="columnheader button" title="Sort ascending">Lowest point
 </th>
-<th width="1%">
+<th width="84px" class="headerSort" tabindex="0" role="columnheader button" title="Sort ascending">Minimum elevation
 </th>
-<th width="1%">Position
-</th>
-<th width="75%">Player
-</th></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">13
+<th width="70px" class="headerSort" tabindex="0" role="columnheader button" title="Sort ascending">Elevation span
+</th></tr></thead><tbody>
+<tr>
+<td><span class="flagicon"><img alt="" src="//upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Flag_of_Afghanistan.svg/23px-Flag_of_Afghanistan.svg.png" decoding="async" width="23" height="15" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Flag_of_Afghanistan.svg/35px-Flag_of_Afghanistan.svg.png 1.5x, //upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Flag_of_Afghanistan.svg/45px-Flag_of_Afghanistan.svg.png 2x" data-file-width="900" data-file-height="600">&nbsp;</span><a href="/wiki/Afghanistan" title="Afghanistan">Afghanistan</a>
 </td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
+<td><a href="/wiki/Noshaq" title="Noshaq">Noshaq</a>
 </td>
-<td style="text-align: center;"><a href="/wiki/Defender_(association_football)" title="Defender (association football)">DF</a>
+<td rowspan="1" align="center"><span style="display:none" data-sort-value="7003749200000000000♠"></span>7492&nbsp;m<br>24,580&nbsp;ft
 </td>
-<td><span class="fn"><a href="/wiki/Jonas_Olsson_(footballer,_born_1983)" title="Jonas Olsson (footballer, born 1983)">Jonas Olsson</a></span> <i>(<a href="/wiki/Captain_(association_football)" title="Captain (association football)">captain</a>)</i>
+<td><a href="/wiki/Amu_Darya" title="Amu Darya">Amu Darya</a>
+</td>
+<td rowspan="1" align="center"><span style="display:none" data-sort-value="7002258000000000000♠"></span>258&nbsp;m<br>846&nbsp;ft
+</td>
+<td rowspan="1" align="center"><span style="display:none" data-sort-value="7003723400000000000♠"></span>7234&nbsp;m<br>23,734&nbsp;ft
 </td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">14
+<tr>
+<td><span class="flagicon"><img alt="" src="//upload.wikimedia.org/wikipedia/commons/thumb/3/36/Flag_of_Albania.svg/21px-Flag_of_Albania.svg.png" decoding="async" width="21" height="15" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/commons/thumb/3/36/Flag_of_Albania.svg/32px-Flag_of_Albania.svg.png 1.5x, //upload.wikimedia.org/wikipedia/commons/thumb/3/36/Flag_of_Albania.svg/42px-Flag_of_Albania.svg.png 2x" data-file-width="1000" data-file-height="714">&nbsp;</span><a href="/wiki/Albania" title="Albania">Albania</a>
 </td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
+<td><a href="/wiki/Korab_(mountain)" title="Korab (mountain)">Korab</a>
 </td>
-<td style="text-align: center;"><a href="/wiki/Midfielder" title="Midfielder">MF</a>
+<td rowspan="1" align="center"><span style="display:none" data-sort-value="7003276400000000000♠"></span>2764&nbsp;m<br>9,068&nbsp;ft
 </td>
-<td><span class="fn"><a href="/wiki/Besard_Sabovic" title="Besard Sabovic">Besard Sabovic</a></span>
+<td><a href="/wiki/Adriatic_Sea" title="Adriatic Sea">Adriatic Sea</a>
+</td>
+<td rowspan="1" align="center"><span style="display:none" data-sort-value="5000000000000000000♠"></span>sea level
+</td>
+<td rowspan="1" align="center"><span style="display:none" data-sort-value="7003276400000000000♠"></span>2764&nbsp;m<br>9,068&nbsp;ft
 </td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">15
+<tr>
+<td><span class="flagicon"><img alt="" src="//upload.wikimedia.org/wikipedia/commons/thumb/7/77/Flag_of_Algeria.svg/23px-Flag_of_Algeria.svg.png" decoding="async" width="23" height="15" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/commons/thumb/7/77/Flag_of_Algeria.svg/35px-Flag_of_Algeria.svg.png 1.5x, //upload.wikimedia.org/wikipedia/commons/thumb/7/77/Flag_of_Algeria.svg/45px-Flag_of_Algeria.svg.png 2x" data-file-width="900" data-file-height="600">&nbsp;</span><a href="/wiki/Algeria" title="Algeria">Algeria</a>
 </td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
+<td><a href="/wiki/Mount_Tahat" title="Mount Tahat">Mount Tahat</a>
 </td>
-<td style="text-align: center;"><a href="/wiki/Defender_(association_football)" title="Defender (association football)">DF</a>
+<td rowspan="1" align="center"><span style="display:none" data-sort-value="7003300300000000000♠"></span>3003&nbsp;m<br>9,852&nbsp;ft
 </td>
-<td><span class="fn"><a href="/wiki/Jonathan_Augustinsson" title="Jonathan Augustinsson">Jonathan Augustinsson</a></span>
+<td><a href="/wiki/Chott_Melrhir" title="Chott Melrhir">Chott Melrhir</a>
+</td>
+<td rowspan="1" align="center"><span style="display:none" class="sortkey">2998600000000000000♠</span><span style="color:red">−40&nbsp;m<br>−131&nbsp;ft</span>
+</td>
+<td rowspan="1" align="center"><span style="display:none" data-sort-value="7003304300000000000♠"></span>3043&nbsp;m<br>9,984&nbsp;ft
 </td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">16
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Midfielder" title="Midfielder">MF</a>
-</td>
-<td><span class="fn">Joseph Ceesay</span>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">17
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Midfielder" title="Midfielder">MF</a>
-</td>
-<td><span class="fn"><a href="/wiki/Hampus_Finndell" title="Hampus Finndell">Hampus Finndell</a></span>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">18
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Zambia" title="Zambia"><img alt="Zambia" src="//upload.wikimedia.org/wikipedia/commons/thumb/0/06/Flag_of_Zambia.svg/23px-Flag_of_Zambia.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/commons/thumb/0/06/Flag_of_Zambia.svg/35px-Flag_of_Zambia.svg.png 1.5x, //upload.wikimedia.org/wikipedia/commons/thumb/0/06/Flag_of_Zambia.svg/45px-Flag_of_Zambia.svg.png 2x" data-file-width="2100" data-file-height="1400" width="23" height="15"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Midfielder" title="Midfielder">MF</a>
-</td>
-<td><span class="fn"><a href="/wiki/Edward_Chilufya" title="Edward Chilufya">Edward Chilufya</a></span>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">19
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Midfielder" title="Midfielder">MF</a>
-</td>
-<td><span class="fn"><a href="/wiki/Nicklas_B%C3%A4rkroth" title="Nicklas Bärkroth">Nicklas Bärkroth</a></span>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">20
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Senegal" title="Senegal"><img alt="Senegal" src="//upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Flag_of_Senegal.svg/23px-Flag_of_Senegal.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Flag_of_Senegal.svg/35px-Flag_of_Senegal.svg.png 1.5x, //upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Flag_of_Senegal.svg/45px-Flag_of_Senegal.svg.png 2x" data-file-width="900" data-file-height="600" width="23" height="15"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Forward_(association_football)" title="Forward (association football)">FW</a>
-</td>
-<td><span class="fn"><a href="/wiki/Aliou_Badji" title="Aliou Badji">Aliou Badji</a></span>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">21
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Defender_(association_football)" title="Defender (association football)">DF</a>
-</td>
-<td><span class="fn"><a href="/wiki/Erik_Johansson_(footballer,_born_1988)" title="Erik Johansson (footballer, born 1988)">Erik Johansson</a></span>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">23
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Norway" title="Norway"><img alt="Norway" src="//upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Flag_of_Norway.svg/21px-Flag_of_Norway.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Flag_of_Norway.svg/32px-Flag_of_Norway.svg.png 1.5x, //upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Flag_of_Norway.svg/41px-Flag_of_Norway.svg.png 2x" data-file-width="1100" data-file-height="800" width="21" height="15"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Midfielder" title="Midfielder">MF</a>
-</td>
-<td><span class="fn"><a href="/wiki/Fredrik_Ulvestad" title="Fredrik Ulvestad">Fredrik Ulvestad</a></span>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">30
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Goalkeeper_(association_football)" title="Goalkeeper (association football)">GK</a>
-</td>
-<td><span class="fn"><a href="/wiki/Tommi_Vaiho" title="Tommi Vaiho">Tommi Vaiho</a></span>
-</td></tr>
-<tr class="vcard agent">
-<td style="text-align: right;">35
-</td>
-<td style="text-align: right;"><span class="flagicon"><a href="/wiki/Sweden" title="Sweden"><img alt="Sweden" src="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/23px-Flag_of_Sweden.svg.png" class="thumbborder" srcset="//upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/35px-Flag_of_Sweden.svg.png 1.5x, //upload.wikimedia.org/wikipedia/en/thumb/4/4c/Flag_of_Sweden.svg/46px-Flag_of_Sweden.svg.png 2x" data-file-width="1600" data-file-height="1000" width="23" height="14"></a></span>
-</td>
-<td style="text-align: center;"><a href="/wiki/Goalkeeper_(association_football)" title="Goalkeeper (association football)">GK</a>
-</td>
-<td><span class="fn"><a href="/wiki/Oscar_Jonsson_(footballer)" title="Oscar Jonsson (footballer)">Oscar Jonsson</a></span>
-</td></tr></tbody></table>
-</td></tr></tbody></table>"""
+</tbody><tfoot></tfoot></table>
+"""
         soup = BeautifulSoup(html, 'html.parser')
         tables = readHTML.readTables(soup)
         listt = readHTML.tableTo2d(tables[0])
         table2d = listt[0]
+        print(table2d.toHTML())
+        print(table2d.nrows)
+        assert len(listt)==1
         headers = readHTML.getMainColHeaders(table2d.htmlMatrix)
         print(headers)
 

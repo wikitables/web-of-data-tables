@@ -1,7 +1,7 @@
 import json
 from bs4 import BeautifulSoup
 import wtables.schema.DataType as dt
-
+from wtables.schema.TableType import TableType
 
 class Article(object):
     def __init__(self, articleId, title, tables):
@@ -9,12 +9,15 @@ class Article(object):
         self.title = title
         self.tables = tables
 
+    def setTables(self, tables):
+        self.tables=tables
+
     def reprJSON(self):
         return dict(articleId=self.articleId, title=self.title, tables=self.tables)
 
 
 class Table(object):
-    def __init__(self, attrs, title, htmlMatrix, colHeaders, rowHeaders, startRows, nrows, ncols):
+    def __init__(self, attrs, title, htmlMatrix, html, colHeaders, rowHeaders, startRows, nrows, ncols):
         self.tableId = ""
         self.attrs = attrs
         self.title = title
@@ -24,10 +27,33 @@ class Table(object):
         self.startRows = startRows
         self.nrows = nrows
         self.ncols = ncols
-        self.innerTable = False
+        self.html=html
+        self.tableType=None
+        self.tableCells=None
+        self.articleId=None
+        self.articleTitle=None
+        self.articlePath=None
 
-    def setInnerTable(self, innerTable):
-        self.innerTable = innerTable
+    def setArticleId(self, articleId):
+        self.articleId=articleId
+
+    def setArticleTitle(self, articleTitle):
+        self.articleTitle=articleTitle
+
+    def setArticlePath(self, articlePath):
+        self.articlePath=articlePath
+
+    def setStartRows(self, startRows):
+        self.startRows=startRows
+
+    def setColHeaders(self, colHeaders):
+        self.colHeaders=colHeaders
+
+    def setTableCells(self, tableCells):
+        self.tableCells=tableCells
+
+    def setTableType(self, tableType):
+        self.tableType=tableType
 
     def setTableId(self, tableId):
         self.tableId = tableId
@@ -55,14 +81,34 @@ class Table(object):
         for i in range(len(self.htmlMatrix)):
             html += "<tr>"
             for j in range(len(self.htmlMatrix[0])):
-                html += self.htmlMatrix[i][j]
+                html += cleanCell(self.htmlMatrix[i][j])
             html += "</tr>"
         html += "</table>"
-        return html
+        whitelist = ['a', 'abbr', 'img']
+        soupTag = BeautifulSoup(html, "html.parser")
+        innerTags = soupTag.find_all()
+        for tag in innerTags:
+            if tag.name not in whitelist:
+                tag.attrs = {}
+        return str(soupTag)
+
+    def setHTMLMatrix(self, htmlMatrix):
+        self.htmlMatrix=htmlMatrix
 
     def reprJSON(self):
         return dict(tableId=self.tableId, title=self.title, htmlMatrix=self.htmlMatrix, startRows=self.startRows,
-                    colHeaders=self.colHeaders, rowHeaders=self.rowHeaders, nrows=self.nrows, ncols=self.ncols)
+                    colHeaders=self.colHeaders, rowHeaders=self.rowHeaders, nrows=self.nrows, ncols=self.ncols, html=self.html,
+                    tableType=self.tableType, articleTitle=self.articleTitle, articleId=self.articleId,
+                    attrs=self.attrs, articlePath=self.articlePath)
+
+def cleanCell(text):
+    whitelist = ['a', 'abbr', 'img']
+    soupTag=BeautifulSoup(text, "html.parser")
+    innerTags = soupTag.find_all()
+    for tag in innerTags:
+        if tag.name not in whitelist:
+            tag.attrs = {}
+    return str(soupTag)
 
 
 class ComplexEncoder(json.JSONEncoder):
@@ -79,9 +125,33 @@ class ComplexDecoder(object):
             tables = obj["tables"]
             listt2d = []
             for table in tables:
-                table2d = Table(title=table["title"], htmlMatrix=table["htmlMatrix"], attrs=None,
+                table2d = Table(title=table["title"], htmlMatrix=table["htmlMatrix"], attrs=table.get('attrs'),
                                 startRows=table["startRows"], colHeaders=table["colHeaders"],
-                                rowHeaders=table["rowHeaders"], nrows=table["nrows"], ncols=table["ncols"])
+                                rowHeaders=table["rowHeaders"], nrows=table["nrows"], ncols=table["ncols"], html=table.get('html'),
+                                )
                 table2d.setTableId(table["tableId"])
+
+                table2d.setTableType(TableType(table.get("tableType")))
+                table2d.setArticleId(obj.get("articleId"))
+                table2d.setArticleTitle(obj.get("articleTitle"))
+                table2d.setArticlePath(obj.get("articlePath"))
+
                 listt2d.append(table2d)
             return Article(obj['articleId'], obj['title'], listt2d[:])
+
+class ComplexDecoderTable(object):
+    def default(self, obj):
+        if 'tableId' in obj:
+            table2d = Table(title=obj["title"], htmlMatrix=obj["htmlMatrix"], attrs=obj.get('attrs'),
+                                startRows=obj["startRows"], colHeaders=obj["colHeaders"],
+                                rowHeaders=obj["rowHeaders"], nrows=obj["nrows"], ncols=obj["ncols"], html=obj.get("html")
+                                )
+
+            table2d.setTableId(obj["tableId"])
+
+            table2d.setTableType(TableType(obj.get("tableType")))
+            table2d.setArticleId(obj.get("articleId"))
+            table2d.setArticleTitle(obj.get("articleTitle"))
+            table2d.setArticlePath(obj.get("articlePath"))
+
+            return table2d

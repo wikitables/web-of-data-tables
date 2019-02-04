@@ -40,7 +40,9 @@ setup(
         'joblib>=0.10.3',
         'bidict>=0.12.0',
         'sphinx>=1.3',
-        'guzzle_sphinx_theme>=0.7.11'
+        'guzzle_sphinx_theme>=0.7.11','strsim',
+        'Whoosh',
+        'nltk'
     ],
     extras_require={
         'tf': ['tensorflow>=1.0.1'],

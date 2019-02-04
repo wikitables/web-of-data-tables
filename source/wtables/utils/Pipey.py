@@ -26,6 +26,7 @@ class Task:
         self.process = Process(target=self.main, args=(self.inputQueue, self.outputQueue))
         self.process.start()
 
+
     def main(self, inputQueue, outputQueue):
         self.inputQueue = inputQueue
         self.outputQueue = outputQueue
@@ -81,7 +82,6 @@ class Task:
             print("For {}".format(self.fn))
             raise
 
-
 class Pipeline:
     def __init__(self):
         self.tasks = []
@@ -96,8 +96,9 @@ class Pipeline:
 
         self.inputQueue.put(arg)
         while True:
-            x = self.outputQueue.get()
-            if x == STOP: break
+                x = self.outputQueue.get()
+                if x == STOP: break
+
 
     def add(self, fn, fanOut=1):
         inputQueue = self.inputQueue
