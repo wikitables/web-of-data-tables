@@ -9,6 +9,7 @@ class FeaturesCluster(object):
         self.relationsByProperty={}
         self.rowsByProperty = {}
         self.dictFeatures={}
+        self.totalRows=0
 
     def addRowsByProperty(self, prop):
         if self.rowsByProperty.get(prop) is None:

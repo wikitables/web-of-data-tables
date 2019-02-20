@@ -42,7 +42,8 @@ setup(
         'sphinx>=1.3',
         'guzzle_sphinx_theme>=0.7.11','strsim',
         'Whoosh',
-        'nltk'
+        'nltk',
+        'torch'
     ],
     extras_require={
         'tf': ['tensorflow>=1.0.1'],

@@ -116,8 +116,10 @@ class TextProcessing(object):
         return _headers
 
 
-"""if __name__ == '__main__':
+if __name__ == '__main__':
     tp=TextProcessing()
+    print(tp.textSimilarity('protag_article', 'has part'))
+    """
     #print(tp.stemWord("runners_up"))
     #print(tp.cleanTableHeader(eval("['distance_(total;_km)@1', 'distance_(s2s;_km)@1', 'station_name_(transcribed)@3', 
                                         'station_name_(chosŏn'gŭl_(hanja))@3', 'former_name_(transcribed)@4', former_name_(chosŏn'gŭl_(hanja))@4, 'connections@3']")))

@@ -23,7 +23,7 @@ def filterHeaders(fileIn):
             ncols = _line[2]
             nrows = _line[3]
             start = _line[4]
-            types=["@"+h.split("@")[1] for h in headers ]
+            types=["@"+h.split("@")[1] for h in header
             head1 = [h.split("@")[0] for h in headers]
             #head1=[textProcessing.cleanCellHeader(h) for h in head1]
             removeEndSpan = [h[:-9] if "**" in h and h.endswith("spancol") else h for h in head1]

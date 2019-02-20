@@ -14,12 +14,15 @@ from wtables.wikidata_db.WikidataDAO import *
 import traceback
 import random
 import gc
+from bs4 import Tag
 
 def extractTableFile(tableId):
+    #Read tables from main directory
     try:
         file = open(os.path.join(FOLDER_JSON_FILES,tableId.replace(".","_") + ".json"), "r")
         obj = file.read()
         obj = json.loads(obj)
+        #Converting json to Table object
         table= ComplexDecoderTable().default(obj)
         return table
     except Exception as ex:
@@ -27,6 +30,7 @@ def extractTableFile(tableId):
         return None
 
 def extractCellResources(content):
+    #Extract links from cells and get Wikidata IDs for cell (content)
     bscell = BeautifulSoup(content, "html.parser")
     linksCell = readHTML.readTableCellLinks(bscell)
 
@@ -47,6 +51,7 @@ def extractCellResources(content):
     return resources
 
 def extractArticleResource(articleTitle):
+    #Convert article of title to Link and get Wikidata ID
     _link = wikiLink(articleTitle)
     if _link != None and _link != "":
         wd= wikidataDAO.getWikidataID(_link)
@@ -56,6 +61,7 @@ def extractArticleResource(articleTitle):
             return resource
 
 def emptyRow(cells):
+    #Counter rows for feature numRows. Avoid to count empty rows.
     ncells=len(cells)
     emptyCells=0
     for cell in cells:
@@ -67,6 +73,8 @@ def emptyRow(cells):
         return False
 
 def extractTableResources(table):
+    #Fill a table matrix with resources for each cell and extract relations between a pair cells.
+    #Creates a dictionary to return relations by pair of columns.
     if table.htmlMatrix==None:
         return {}
     matrix=np.array(table.htmlMatrix)
@@ -79,6 +87,9 @@ def extractTableResources(table):
             continue
         for col in range(len(matrix[0])):
             colName=colHeaders[col]
+            if (matrix[row][col])==None:
+                print("Cell None:", table.tableId, matrix[row][col], row, col)
+                continue
             resources = extractCellResources(matrix[row][col])
             #if len(resources)>0:
             tableCell = TableCell(table.tableId, row, col, colName)
@@ -90,7 +101,7 @@ def extractTableResources(table):
             #else:
             #matrixCells[row][col] = None
 
-
+    #Create relations between cells and title's article
     resourceArticle = extractArticleResource(table.articleTitle)
     if resourceArticle is not None:
         for col2 in range(len(matrixCells[0])):
@@ -106,16 +117,18 @@ def extractTableResources(table):
                 if cell2==None:
                     continue
                 res2 = cell2.resources
-                #if len(res2)>0:
-                relation = RelationCell(cell1, cell2)
-                if relations.get(key) == None:
-                    relations[key] = [relation]
-                else:
-                    relations[key].append(relation)
+                if len(res2)>0:
+                    relation = RelationCell(cell1, cell2)
+                    if relations.get(key) == None:
+                        relations[key] = [relation]
+                    else:
+                        relations[key].append(relation)
 
+    # Create relations between a pair of cells that contain resources in table matrix.
     for col1 in range(len(matrix[0])):
         colName1=colHeaders[col1]
         for col2 in range(col1+1, len(matrix[0])):
+            #Col names are sortered, to avoid incorrect property directions in a cluster.
             colName2 = colHeaders[col2]
             dictCols = {colName1: col1, colName2: col2}
             sortedCols =[colName1, colName2]
@@ -146,12 +159,16 @@ def extractTableResources(table):
     return relations
 
 def extractRelations(colRelations):
+    # Extract predicates from Wikidata, for each relation.
+
     allRelations=[]
     newTableRelations={}
     dictColRelations={}
     generalRelations={}
 
+
     for cols, relations in colRelations.items():
+            relationsResources=[]
             for relation in relations:
                 _relation=relation
                 resources1=relation.tableCell1.resources
@@ -170,8 +187,8 @@ def extractRelations(colRelations):
                             else:
                                 relation.predicates[res1.id][res2.id]= predicates
 
-
                 if len(resources1)>0 and len(resources2)>0:
+                    relationsResources.append(relation)
                     relationsByCols=generalRelations.get(cols)
                     if len(allPredicates) > 0:
                         if relationsByCols is None:
@@ -179,43 +196,13 @@ def extractRelations(colRelations):
                         else:
                             relationsByCols=set(relationsByCols)
                             generalRelations[cols]=list(relationsByCols.union(set(allPredicates)))
-            dictColRelations[cols]=relations
+            #Save relations by key: cols
+            dictColRelations[cols]=relationsResources[:]
     return generalRelations,dictColRelations
 
-def getNewTriples(tableId,relation, generalPredicates):
-    if generalPredicates==None or len(generalPredicates)==0:
-        return []
-    res1 = relation.tableCell1.resources
-    res2 = relation.tableCell2.resources
-    pos=str(relation.tableCell1.row)+":"+str(relation.tableCell1.col)+":"+str(relation.tableCell2.col)
-    triples=[]
-
-    for r1 in res1:
-        obj = relation.predicates.get(r1.id)
-        if obj != None:
-            for r2 in res2:
-                preds = obj.get(r2.id)
-                if r1.id==r2.id:
-                    continue
-                #print("Preds, generalP: ", tableId, r1.url, r2.url, preds, generalPredicates)
-                if preds!=None:
-                    diff=set(generalPredicates)-set(preds)
-                else:
-                    diff=generalPredicates
-                if len(diff)==0:
-                    continue
-                listPreds=[]
-                if len(diff)>0:
-                    for p in diff:
-                        pdesc=wikidataDAO.getWikidataProp(p)
-                        if pdesc==None:
-                            pdesc=PropertyStat(p, p)
-                        listPreds.append(pdesc)
-                    tripleFeatures=TripleFeatures(tableId, pos,  r1, r2, listPreds)
-                    triples.append(tripleFeatures)
-    return triples
 
 def getTriples(tableId,relation):
+    #Extract triples by all resources in a relations, means that a relation could have more than a pair of entities.
     res1 = relation.tableCell1.resources
     res2 = relation.tableCell2.resources
     pos=str(relation.tableCell1.row)+":"+str(relation.tableCell1.col)+":"+str(relation.tableCell2.col)
@@ -239,6 +226,7 @@ def getTriples(tableId,relation):
     return triples
 
 def getTableFeatures(table, dictFeatures):
+    #Fill features by table
     dictFeatures[2]=table.tableId.split(".")[1]
     dictFeatures[3]=table.nrows-table.startRows
     dictFeatures[4] = table.ncols
@@ -246,11 +234,19 @@ def getTableFeatures(table, dictFeatures):
 
 
 def formatFeatures(content):
+    #Extrac format features from cell (content)
     bullets = 0
     resources = 0
     hasFormat = 0
     multipleLine = 0
-    cell = BeautifulSoup(content, "html.parser")
+
+    bsoup = BeautifulSoup(content)
+    #print(bsoup)
+    if "<td" in content:
+        cell = bsoup.find("td")
+    else:
+        cell = bsoup.find("th")
+    #print(cell)
     links = readHTML.readTableCellLinks(cell)
     # count   the    list
     bullets += len(cell.find_all("ul"))
@@ -265,8 +261,8 @@ def formatFeatures(content):
     # count    multiple - lines
     multipleLine += multipleLine + len(cell.find_all("br"))
     noLinksText = readHTML.getTagTextNoLinks(cell)
-    cspan=cell.attrs.get('colspan')
-    rspan=cell.attrs.get('rowspan')
+    cspan=cell.get('colspan')
+    rspan=cell.get('rowspan')
     if cspan!=None:
         cspan=1
     else:
@@ -291,13 +287,16 @@ def formatFeatures(content):
 
 
 def getColTableFeatures(relationsByCols, dictFeatures):
-
+    #Extract column features from relations by pair of cols.
     subjs=[]
     objs=[]
     subjs2=[]
     objs2 = []
     potRelations=[]
+    rel=None
+    #print(len(relationsByCols))
     for relation in relationsByCols:
+        rel=relation
         resSubj=relation.tableCell1.getResourcesIds()
         resObj=relation.tableCell2.getResourcesIds()
         subjs.extend(resSubj)
@@ -312,8 +311,9 @@ def getColTableFeatures(relationsByCols, dictFeatures):
 
     # (7) subject  column  id
     # (8) objectcolumn id
-    dictFeatures[7] =relation.tableCell1.col
-    dictFeatures[8] = relation.tableCell2.col
+    #print(rel.tableCell1.colName)
+    dictFeatures[7] =rel.tableCell1.col
+    dictFeatures[8] = rel.tableCell2.col
     # (9 & 10) No of entities in s & o  cols.
     # (11)  ratio: (9) / (10)
     dictFeatures[9]=nsubj=len(subjs)
@@ -353,6 +353,7 @@ def getColTableFeatures(relationsByCols, dictFeatures):
 
 
 def getColNameFeatures(predicate, colName1, colName2, dictFeatures):
+    #Extract column name features, specifically text simmilarity between column names and predicate
     _colName1 = colName1.split("__")
     if len(_colName1) > 1:
         _colName1 = _colName1[1]
@@ -386,22 +387,29 @@ def getColNameFeatures(predicate, colName1, colName2, dictFeatures):
     dictFeatures[30] = max([simm1, simm2])
 
 def getPredicateFeatures(pred, dictFeatures):
-    # (17) Normalized unique subject count
-    dictFeatures[17] = pred.uniqSubj / wikidataDAO.PRED_MAX_SUBJ
-    dictFeatures[18] = pred.uniqObj / wikidataDAO.PRED_MAX_OBJ
-    dictFeatures[47] = pred.maxSubj
-    dictFeatures[48] = pred.maxObj
+    #Extract features from stats of predicate
 
-    dictFeatures[19] = pred.times / wikidataDAO.PRED_MAX_INSTA
+    # (17) Normalized unique subject count
+    #if "-1" in pred.propId:
+    #    _pred=wikidataDAO.getWikidataProp(pred.propId.replace("-1",""))
+    #else:
+    _pred=pred
+    dictFeatures[17] = _pred.uniqSubj / wikidataDAO.PRED_MAX_SUBJ
+    dictFeatures[18] = _pred.uniqObj / wikidataDAO.PRED_MAX_OBJ
+    dictFeatures[47] = _pred.maxSubj
+    dictFeatures[48] = _pred.maxObj
+
+    dictFeatures[19] = _pred.times / wikidataDAO.PRED_MAX_INSTA
     if dictFeatures[19]>0:
         dictFeatures[20] = dictFeatures[18]/dictFeatures[19]
     else:
         dictFeatures[20]=0
-        print("Feature 19 0: ",pred.propName)
+        print("Feature 19 0: ",_pred.propName)
 
 
 
 def getColPredicateTableFeatures(pred, relationsByCols, dictFeatures):
+    #Extract features for predicate in a set of relations.
     rowsRelation=0
     potRelations=[]
     rowRel=False
@@ -452,6 +460,8 @@ def getColPredicateTableFeatures(pred, relationsByCols, dictFeatures):
 
 
 def getCellFeatures(tableCell1, tableCell2, dictFeatures):
+    #Extract numeric features by tableCell. Protagonist article cell will have 0 in format features.
+
     #(21 & 22) number of entities in s & o   cells
     nsubj=len(tableCell1.resources)
     nobj = len(tableCell2.resources)
@@ -484,8 +494,8 @@ def getCellFeatures(tableCell1, tableCell2, dictFeatures):
     linksObj = str(tableCell2.formatFeatures.get('links', 0))
     hasSpanSubj= str(tableCell1.formatFeatures.get('hasSpan', 0))
     hasSpanObj = str(tableCell2.formatFeatures.get('hasSpan', 0))
-    dictFeatures[41] = noLinksObj
-    dictFeatures[42] = noLinksSubj
+    dictFeatures[41] = noLinksSubj
+    dictFeatures[42] = noLinksObj
     dictFeatures[43] = linksSubj
     dictFeatures[44] = linksObj
     dictFeatures[45]=hasSpanSubj
@@ -494,15 +504,16 @@ def getCellFeatures(tableCell1, tableCell2, dictFeatures):
 
 
 def getTotalRelations(colRelations):
+    #Count total relations by pair of cols in a table.
     totalRelations=0
     for col, relations in colRelations.items():
             for rel in relations:
                 for subj, objs in rel.predicates.items():
-                    for obj, preds in objs.items():
-                        totalRelations+=1
+                    totalRelations+=len(objs)
     return totalRelations
 
 def getClusterFeatures(featuresCluster, relations):
+    #Extract cluster features, such as number of predicates by pair of columns.
     rowsByPred=[]
     for relation in relations:
         row=0
@@ -525,12 +536,16 @@ def getClusterFeatures(featuresCluster, relations):
                             row=1
 
 def extractFeatures(tables):
+    #Generate input for getTriplesCluster method.
+    # Store in dicts reations by tables, predicates and features by table and predicates by cluster.
     dictFeaturesCluster={}
     triplesCluster=[]
     cluster=""
     totalRows=0
     ntables=0
-    relationsByTable={}
+    relationsByTables={}
+    predsByTables={}
+    featuresTable={}
     for name in tables:
         try:
             ntables+=1
@@ -547,16 +562,18 @@ def extractFeatures(tables):
                 continue
             relationsByCells={}
             generalRelations={}
-            dictFeatures = {i: 0 for i in range(1, 55)}
+            dictFeatures = {i: 0 for i in range(1, 5)}
             relationsByCells=extractTableResources(table)
             #print('rel by cells: ', relationsByCells)
             generalRelations, relationsByTable=extractRelations(relationsByCells)
             getTableFeatures(table, dictFeatures)
             totalRel = getTotalRelations(relationsByTable)
-
             totalRows+=dictFeatures[3]
-            for cols, relations in relationsByTable.items():
+            dictFeatures[6]=totalRel
+            relationsByTables[tableId] = relationsByTable
+            featuresTable[tableId]=dictFeatures.copy()
 
+            for cols, relations in relationsByTable.items():
                 #print("cols: ", cols)
                 featuresCluster=dictFeaturesCluster.get(cols)
                 if featuresCluster==None:
@@ -565,81 +582,10 @@ def extractFeatures(tables):
                 getClusterFeatures(featuresCluster, relations)
                 #UPDATE CLUSTER FEATURES
                 dictFeaturesCluster[cols]=featuresCluster
-                ##COL FEATURES
-                getColTableFeatures(relations, dictFeatures)
-                for rel in relations:
-                    cell1 = rel.tableCell1
-                    cell2 = rel.tableCell2
-                    ##CELL FEATURES
-                    getCellFeatures(cell1, cell2, dictFeatures)
-                    pos = str(table.startRows) + ":" + str(cell1.row) + ":" + str(cell1.col) + ":" + str(
-                        cell2.col)
-                    triples = getTriples(tableId, rel)
-                    #newTriples = getNewTriples(tableId, rel, generalRelations.get(cols))
-                    while triples:
-                        t=triples.pop()
-                        featuresPred={}
-                        if len(t.predicates)>0:
-                            tpreds=[p.propId for p in t.predicates]
-                            newPreds=set(generalRelations.get(cols))-set(tpreds)
-                        else:
-                            newPreds = generalRelations.get(cols)
-                            if newPreds==None:
-                                t.setFeatures({'0':dictFeatures.copy()})
-                                t.setCols(cols)
-                                t.setColName1(cell1.colName)
-                                t.setColName2(cell2.colName)
-                                triplesCluster.append(t)
-                                continue
-                            else:
-                                newPreds = set(generalRelations.get(cols))
-                        for pred in t.predicates:
-                            # COL PREDICATE FEATURES
-                            getColPredicateTableFeatures(pred, relations, dictFeatures)
-                            # COL NAME FEATURES
-                            getColNameFeatures(pred.propName, cell1.colName, cell2.colName, dictFeatures)
-                            # PREDICATE FEATURES
-                            getPredicateFeatures(pred, dictFeatures)
-                            propName = pred.propName
-                            domain = str(wikidataDAO.isInDomain(t.subj.id, pred.propId))
-                            rangeC = str(wikidataDAO.isInRange(t.obj.id, pred.propId))
-                            objectsBySubj=wikidataDAO.getObjBySubjProp(t.subj.id, pred.propId)
-                            if "protag_article" in cell1.colName or 'protag_article' in cell2.colName:
-                                    dictFeatures[37] = 1
-                            dictFeatures[38] = 1
-                            dictFeatures[39] = domain
-                            dictFeatures[40] = rangeC
-                            dictFeatures[49] = str(len(objectsBySubj))
-
-                            featuresPred[pred.propId]=dictFeatures.copy()
-                        for predId in newPreds:
-                            pred=wikidataDAO.getWikidataProp(predId)
-                            if pred==None:
-                                pred=PropertyStat(predId, predId)
-                            #COL PREDICATE FEATURES
-                            getColPredicateTableFeatures(pred, relations, dictFeatures)
-                            # COL NAME FEATURES
-                            getColNameFeatures(pred.propName, cell1.colName, cell2.colName, dictFeatures)
-                            # COL PREDICATE FEATURES
-                            getPredicateFeatures(pred,dictFeatures)
-                            propName = pred.propName
-                            domain = str(wikidataDAO.isInDomain(t.subj.id, pred.propId))
-                            rangeC = str(wikidataDAO.isInRange(t.obj.id, pred.propId))
-                            objectsBySubj = wikidataDAO.getObjBySubjProp(t.subj.id, pred.propId)
-                            if "protag_article" in cell1.colName or 'protag_article' in cell2.colName:
-                                    dictFeatures[37] = 1
-                            dictFeatures[38] = 0
-                            dictFeatures[39] = domain
-                            dictFeatures[40] = rangeC
-                            dictFeatures[49] = str(len(objectsBySubj))
-                            featuresPred[pred.propId]=dictFeatures.copy()
-                        t.setFeatures(featuresPred)
-                        t.setCols(cols)
-                        t.setColName1(cell1.colName)
-                        t.setColName2(cell2.colName)
-                        triplesCluster.append(t)
-
-
+            relationsByTables[tableId] = relationsByTable.copy()
+            predsByTables[tableId] = generalRelations.copy()
+            del relationsByTable
+            del generalRelations
         except Exception as ex:
             traceback.print_exc()
             print("Error: ", name)
@@ -656,86 +602,137 @@ def extractFeatures(tables):
             #dictClusterFeaturesByCols[cols]['110'] =totalRows
             dictClusterPropertyByCols[cols]=propertiesCluster
     dictFeaturesCluster.clear()
-    return triplesCluster, dictClusterFeaturesByCols, dictClusterPropertyByCols, totalRows
+    return relationsByTables, featuresTable, predsByTables, dictClusterFeaturesByCols, dictClusterPropertyByCols, totalRows
 
 def getTriplesCluster(tables):
     cluster=tables[0].split("#")[0]
-    triplesCluster, dictClusterFeaturesByCols, dictClusterPropertyByCols, totalRows=extractFeatures(tables)
+    relationsByTables, featuresTable, predsByTables, dictClusterFeaturesByCols, dictClusterPropertyByCols, totalRows=extractFeatures(tables)
     out=""
-    while triplesCluster:
-        triple=triplesCluster.pop()
-        tableId=triple.tableId
-        featuresByPred=triple.features
-        triplePreds=list(featuresByPred.keys())
-        clusterPreds=dictClusterPropertyByCols.get(triple.cols)
-        newPreds=set(clusterPreds)-set(triplePreds)
-        if len(triplePreds)==1 and triplePreds[0]=='0':
-            copyFeatures=featuresByPred.get('0')
-            #print("properties ", cluster, triple.cols, clusterPreds, triplePreds, newPreds, copyFeatures)
-            triplePreds.pop(0)
+    for table, relationsTable in relationsByTables.items():
 
-        else:
-            copyFeatures={}
-        while triplePreds:
-            pred=triplePreds.pop()
-            _pred=wikidataDAO.getWikidataProp(pred)
-            if _pred==None:
-                pred=PropertyStat(pred, pred)
-            else:
-                pred=_pred
-            features=featuresByPred.get(pred.propId)
-            features[6] = len(triplePreds)
-            #print("Features:  ", pred.propId, features)
-            if len(triplePreds)==0:
-                copyFeatures=features.copy()
+        dictFeatures = {i: 0 for i in range(1, 55)}
+        #TABLE FEATURES
+        dictFeatures.update(featuresTable.get(table))
+        for cols, relations in relationsTable.items():
+            #COL FEATURES
+            if len(relations)==0:
+                continue
+            getColTableFeatures(relations, dictFeatures)
+            for rel in relations:
+                cell1 = rel.tableCell1
+                cell2 = rel.tableCell2
+                ##CELL FEATURES
+                getCellFeatures(cell1, cell2, dictFeatures)
+                triples = getTriples(table, rel)
+                tablePreds = predsByTables.get(table).get(cols)
+                if tablePreds is None:
+                    tablePreds = []
+                clusterPreds = set(dictClusterPropertyByCols.get(cols)) - set(tablePreds)
+                while triples:
+                    t = triples.pop()
+                    featuresPred = {}
+                    tpreds = [p.propId for p in t.predicates]
+                    if tpreds is None:
+                        tpreds=[]
 
-            featuresCluster=dictClusterFeaturesByCols.get(triple.cols).get(pred.propId)
-            #print("Features cluster: ", dictClusterFeaturesByCols, featuresCluster)
-            allFeatures=features.copy()
-            allFeatures.update(featuresCluster)
-            allFeatures[110]=totalRows
+                    newPreds = set(tablePreds) - set(tpreds)
+                    for pred in t.predicates:
+                        getColPredicateTableFeatures(pred, relations, dictFeatures)
+                        getColNameFeatures(pred.propName, cell1.colName, cell2.colName, dictFeatures)
+                        getPredicateFeatures(pred, dictFeatures)
+                        propName = pred.propName
+                        domain = str(wikidataDAO.isInDomain(t.subj.id, pred.propId))
+                        rangeC = str(wikidataDAO.isInRange(t.obj.id, pred.propId))
+                        if "protag_article" in cell1.colName or 'protag_article' in cell2.colName:
+                            dictFeatures[37] = 1
+                        dictFeatures[38] = 1
+                        dictFeatures[39] = domain
+                        dictFeatures[40] = rangeC
+                        featuresCluster = dictClusterFeaturesByCols.get(cols).get(pred.propId)
+                        allFeatures = dictFeatures.copy()
+                        allFeatures.update(featuresCluster)
+                        allFeatures[110] = totalRows
+                        objectsBySubj = wikidataDAO.getObjBySubjProp(t.subj.id, pred.propId)
+                        allFeatures[49] = str(len(objectsBySubj))
+                        outf = ""
+                        for k in sorted(list(allFeatures.keys())):
+                            outf += str(k) + ":" + str(allFeatures.get(k)) + "\t"
 
-            outf = ""
-            for k in sorted(list(allFeatures.keys())):
-                outf += str(k) + ":" + str(allFeatures.get(k)) + "\t"
-            out += outf + cluster + "\t" + triple.tableId + "\t" + triple.pos + "\t" + triple.colName1 + "\t" + triple.colName2 + "\t" + triple.subj.toString() + "\t" + pred.propId + " :" + pred.propName + "\t" + \
-                   triple.obj.toString() + "\n"
-        while newPreds:
-            #print("New preds", newPreds)
-            allFeature={}
-            pred = newPreds.pop()
-            _pred = wikidataDAO.getWikidataProp(pred)
-            if _pred == None:
-                pred = PropertyStat(pred, pred)
-            else:
-                pred=_pred
-            featuresCluster=dictClusterFeaturesByCols.get(triple.cols).get(pred.propId)
-            #print("New preds, features:", cluster, triple.cols, pred.propId)
-            allFeatures=copyFeatures
-            allFeatures.update({9:0,10:0,11:0,12:0,13:0,14:0, 15:0, 16:0, 31: 0, 32: 0, 33: 0, 34: 0, 35: 0, 36: 0})
-            allFeatures.update(featuresCluster)
-            getColNameFeatures(pred.propName, triple.colName1, triple.colName2, allFeatures)
-            getPredicateFeatures(pred, allFeatures)
-            propName = pred.propName
-            domain = str(wikidataDAO.isInDomain(triple.subj.id, pred.propId))
-            rangeC = str(wikidataDAO.isInRange(triple.obj.id, pred.propId))
-            if "protag_article" in triple.colName1 or 'protag_article' in triple.colName2:
-                allFeatures[37] = 1
-            allFeatures[38] = 2
-            allFeatures[39] = domain
-            allFeatures[40] = rangeC
-            allFeatures[110]= totalRows
-            objectsBySubj = wikidataDAO.getObjBySubjProp(triple.subj.id, pred.propId)
-            allFeatures[49] = str(len(objectsBySubj))
-            outf = ""
-            for k in sorted(list(allFeatures.keys())):
-                outf += str(k) + ":" + str(allFeatures.get(k)) + "\t"
-            out += outf + cluster + "\t" + triple.tableId + "\t" + triple.pos + "\t" + triple.colName1 + "\t" + triple.colName2 + "\t" + triple.subj.toString() + "\t" + pred.propId + " :" + pred.propName + "\t" + \
-                   triple.obj.toString() + "\n"
-    return out #+"RESULT"+cluster+"\t"+str(dictClusterPropertyByCols)+"\n"
+                        out += outf + cluster + "\t" + t.tableId + "\t" + t.pos + "\t" + cell1.colName + "\t" + cell2.colName + "\t" + t.subj.toString() + "\t" + pred.propId + " :" + pred.propName + "\t" + \
+                            t.obj.toString() + "\n"
+                        #fileout.write(
+                        #    outf + cluster + "\t" + t.tableId + "\t" + t.pos + "\t" + cell1.colName + "\t" + cell2.colName + "\t" + t.subj.toString() + "\t" + pred.propId + " :" + pred.propName + "\t" + \
+                        #    t.obj.toString() + "\n")
 
+                    for predId in newPreds:
+                        pred = wikidataDAO.getWikidataProp(predId)
+                        if pred == None:
+                            pred = PropertyStat(predId, predId)
+                        getColPredicateTableFeatures(pred, relations, dictFeatures)
+                        getColNameFeatures(pred.propName, cell1.colName, cell2.colName, dictFeatures)
+                        getPredicateFeatures(pred, dictFeatures)
+                        propName = pred.propName
+                        domain = str(wikidataDAO.isInDomain(t.subj.id, pred.propId))
+                        rangeC = str(wikidataDAO.isInRange(t.obj.id, pred.propId))
+                        if "protag_article" in cell1.colName or 'protag_article' in cell2.colName:
+                            dictFeatures[37] = 1
+                        dictFeatures[38] = 0
+                        dictFeatures[39] = domain
+                        dictFeatures[40] = rangeC
+                        featuresCluster = dictClusterFeaturesByCols.get(cols).get(pred.propId)
+                        allFeatures = dictFeatures.copy()
+                        allFeatures.update(featuresCluster)
+                        allFeatures[110] = totalRows
+                        objectsBySubj = wikidataDAO.getObjBySubjProp(t.subj.id, pred.propId)
+                        allFeatures[49] = str(len(objectsBySubj))
+                        outf = ""
+                        for k in sorted(list(allFeatures.keys())):
+                            outf += str(k) + ":" + str(allFeatures.get(k)) + "\t"
+                        out += outf + cluster + "\t" + t.tableId + "\t" + t.pos + "\t" + cell1.colName + "\t" + cell2.colName + "\t" + t.subj.toString() + "\t" + pred.propId + " :" + pred.propName + "\t" + \
+                               t.obj.toString() + "\n"
+                        #fileout.write(
+                        #    outf + cluster + "\t" + t.tableId + "\t" + t.pos + "\t" + cell1.colName + "\t" + cell2.colName + "\t" + t.subj.toString() + "\t" + pred.propId + " :" + pred.propName + "\t" + \
+                        #    t.obj.toString() + "\n")
 
-def process():
+                    for predId in clusterPreds:
+                        pred = wikidataDAO.getWikidataProp(predId)
+                        if pred == None:
+                            pred = PropertyStat(predId, predId)
+                        getColPredicateTableFeatures(pred, relations, dictFeatures)
+                        getColNameFeatures(pred.propName, cell1.colName, cell2.colName, dictFeatures)
+                        getPredicateFeatures(pred, dictFeatures)
+                        propName = pred.propName
+                        domain = str(wikidataDAO.isInDomain(t.subj.id, pred.propId))
+                        rangeC = str(wikidataDAO.isInRange(t.obj.id, pred.propId))
+                        if "protag_article" in cell1.colName or 'protag_article' in cell2.colName:
+                            dictFeatures[37] = 1
+                        dictFeatures[38] = 2
+                        dictFeatures[39] = domain
+                        dictFeatures[40] = rangeC
+                        featuresCluster = dictClusterFeaturesByCols.get(cols).get(pred.propId)
+                        allFeatures = dictFeatures.copy()
+                        allFeatures.update(featuresCluster)
+                        allFeatures[110] = totalRows
+                        objectsBySubj = wikidataDAO.getObjBySubjProp(t.subj.id, pred.propId)
+                        allFeatures[49] = str(len(objectsBySubj))
+                        outf=""
+                        for k in sorted(list(allFeatures.keys())):
+                            outf += str(k) + ":" + str(allFeatures.get(k)) + "\t"
+
+                        out += outf + cluster + "\t" + t.tableId + "\t" + t.pos + "\t" + cell1.colName + "\t" + cell2.colName + "\t" + t.subj.toString() + "\t" + pred.propId + " :" + pred.propName + "\t" + \
+                                   t.obj.toString() + "\n"
+                        #fileout.write(
+                        #    outf + cluster + "\t" + t.tableId + "\t" + t.pos + "\t" + cell1.colName + "\t" + cell2.colName + "\t" + t.subj.toString() + "\t" + pred.propId + " :" + pred.propName + "\t" + \
+                        #    t.obj.toString() + "\n")
+    #return out #+"RESULT"+cluster+"\t"+str(dictClusterPropertyByCols)+"\n"
+    del relationsByTables
+    del featuresTable
+    del predsByTables
+    del dictClusterFeaturesByCols
+    del dictClusterPropertyByCols
+    return out
+
+def process(input=0):
     # for each document that we want to process,
 
     #files = os.listdir(path)
@@ -743,8 +740,8 @@ def process():
     listClusters=[]
     clustert=[]
     cont=0
-    with gzip.open(FILE_OUTPUT, "wt") as fout:
-        with gzip.open(FILE_CLUSTER, "rt") as fi:
+    #with open(FILE_OUTPUT, "w") as fout:
+    with gzip.open(FILE_CLUSTER, "rt") as fi:
             for line in fi:
                 if cont==0:
                     cont+=1
@@ -752,44 +749,46 @@ def process():
                 cont+=1
                 _line=line.replace("\n","").split("\t")
 
-                if (int(_line[0])<=5000):
+                if int(_line[0])>1000:
                     if cluster!=_line[0] and cluster!='':
-                        out=getTriplesCluster(clustert)
-                        if out=="":
-                            print("Cluster no relations found: ", cluster)
-                        else:
-                            fout.write(out)
-                        gc.collect()
+                        #getTriplesCluster(clustert, fout)
+                        #out=getTriplesCluster(clustert,fout)
+                        #if out=="":
+                        #    print("Cluster no relations found: ", cluster)
+                        #else:
+                        #    fout.write(out)
+                        #gc.collect()
                         #    print("****************************")
                         #    print("CLuster ok:", _line[0])
-                        #copyCluster=clustert[:]
-                        #listClusters.append(copyCluster)
+                        copyCluster=clustert[:]
+                        listClusters.append(copyCluster)
                         clustert=[_line[0]+"#"+_line[1]]
                         cluster=_line[0]
                     else:
                         cluster = _line[0]
                         clustert.append(_line[0]+"#"+_line[1])
             if len(clustert)>0:
-                #copyCluster = clustert[:]
-                #listClusters.append(copyCluster)
-                out=getTriplesCluster(clustert)
-                if out == "":
-                    print("Cluster no relations found: ", cluster)
-                else:
-                    fout.write(out)
-                gc.collect()
+                copyCluster = clustert[:]
+                listClusters.append(copyCluster)
+                #getTriplesCluster(clustert, fout)
+                #out=getTriplesCluster(clustert)
+                #if out == "":
+                #    print("Cluster no relations found: ", cluster)
+                #else:
+                #    fout.write(out)
+                #gc.collect()
                 #    print("Cluster Ok 2")
 
-    #print("Total custers:", len(listClusters))
-    #for cluster in listClusters:
-    #    print('len cluster', len(cluster))
-    #    yield cluster
+    print("Total custers:", len(listClusters))
+    for cluster in listClusters:
+        print('len cluster', len(cluster))
+        yield cluster
     #lines=file.readlines()
     #files=['1#524269.20','1#708040.3']
     #yield files #.replace("_",".").replace(".json","")
 
     # This will shutdown the entire pipeline once everything is done.
-    #yield Pipey.STOP
+    yield Pipey.STOP
 
 
 def processClusters(tables):
@@ -797,7 +796,6 @@ def processClusters(tables):
     # note you can yield more than one result to the next stage
     #print("File: ", tableId)
     result = getTriplesCluster(tables)
-    gc.collect()
     yield result
 
 
@@ -814,10 +812,10 @@ if __name__ == '__main__':
     FILE_CLUSTER=args[0]
     FILE_OUTPUT=args[1]
     #fileClusterRelations=args[2]
-    process()
-    #pipeline = Pipey.Pipeline()
-    #pipeline.add(process)
-    #pipeline.add(processClusters, 2)
-    #pipeline.add(ResultCombiner(FILE_OUTPUT))
-    #pipeline.run(100)
+    #process()
+    pipeline = Pipey.Pipeline()
+    pipeline.add(process)
+    pipeline.add(processClusters, 8)
+    pipeline.add(ResultCombiner(FILE_OUTPUT))
+    pipeline.run(100)
 

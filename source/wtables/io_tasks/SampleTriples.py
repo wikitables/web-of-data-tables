@@ -24,43 +24,32 @@ def sampleTables(fileTables):
     return tableSet
 
 
-def random_sampler(ftables, ftriples, k, fout):
+def random_sampler(ftriples, k, fout):
     sample = []
-    fo=open(fout, "w")
+    fo=gzip.open(fout, "wt")
     tables=[]
-    with open(ftables, 'r') as f:
-        for line in f:
-            _line=line.replace("\n","").split("\t")
-            tables.append(_line[0])
 
-    with open(ftriples, 'r') as f:
-        #linecount = sum(1 for line in f)
-        #print("Line count: ", 30449860, k)
+    with gzip.open(ftriples, 'rt') as f:
         f.seek(0)
-        #n=30449860
-        #lists=list(range(30449860))
-        #random_linenos = sorted([random.randrange(0,n,1) for i in range(k)], reverse = True)
-        #print("lines-->",random_linenos)
-        #lineno = random_linenos.pop()
+        n=65645207
+        random_linenos = sorted([random.randrange(0,n,1) for i in range(k)], reverse = True)
+        print("lines-->",random_linenos)
+        lineno = random_linenos.pop()
         for n, line in enumerate(f):
+            print("N: ", n)
             _line=line.replace("\n","").split("\t")
-            table=_line[1]
-            if table in tables:
-                tables.remove(table)
+            if n == lineno:
                 fo.write(line.rstrip()+"\n")
-                if len(tables) == 0:
+                if len(random_linenos) > 0:
+                    lineno = random_linenos.pop()
+                else:
                     break
-            #if n == lineno:
-                #print("Line: ", n)
-                #print("pick:", lineno)
-            #    fo.write(line.rstrip()+"\n")
-            #    if len(random_linenos) > 0:
-            #        lineno = random_linenos.pop()
-            #    else:
-            #        break
     fo.close()
 
 if __name__ == '__main__':
     args = sys.argv[1:]
     #random_sampler(args[0], args[1], int(args[2]),args[2])
-    random_sampler('tables.out','testtriples.out', 3, 'out.out')
+    random_sampler(args[0], int(args[1]), args[2])
+    #n = 65645207
+    #random_linenos = sorted([random.randrange(0, n, 1) for i in range(100)], reverse=True)
+    #print(random_linenos)

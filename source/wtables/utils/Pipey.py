@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python3
 #https://gist.github.com/smhanov/8fb48199338045fc5e69fd615211c84c
+
 from multiprocessing import Process, Queue
 import sys
 import logging
