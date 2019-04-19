@@ -118,7 +118,8 @@ class TextProcessing(object):
 
 if __name__ == '__main__':
     tp=TextProcessing()
-    print(tp.textSimilarity('protag_article', 'has part'))
+    print(tp.stemmer.stem('easily'))
+    #print(tp.textSimilarity('protag_article', 'has part'))
     """
     #print(tp.stemWord("runners_up"))
     #print(tp.cleanTableHeader(eval("['distance_(total;_km)@1', 'distance_(s2s;_km)@1', 'station_name_(transcribed)@3', 

@@ -93,10 +93,14 @@ def extractTableResources(table):
             resources = extractCellResources(matrix[row][col])
             #if len(resources)>0:
             tableCell = TableCell(table.tableId, row, col, colName)
-            if len(resources)>0:
-                tableCell.setResources(resources)
-                format = formatFeatures(matrix[row][col])
-                tableCell.setFormatFeatures(format)
+            #if len(resources)>0:
+            tableCell.setResources(resources)
+            try:
+                    format = formatFeatures(matrix[row][col])
+                    tableCell.setFormatFeatures(format)
+            except Exception as ex:
+                    print('Error format')
+                    continue
             matrixCells[row][col]=tableCell
             #else:
             #matrixCells[row][col] = None
@@ -239,50 +243,56 @@ def formatFeatures(content):
     resources = 0
     hasFormat = 0
     multipleLine = 0
+    try:
+        #print(content)
+        bsoup = BeautifulSoup(content)
+        #print(bsoup)
+        if "<td" in content:
+            cell = bsoup.find("td")
+        else:
+            cell = bsoup.find("th")
+        #print(cell)
+        links = readHTML.readTableCellLinks(cell)
+        # count   the    list
+        bullets += len(cell.find_all("ul"))
+        # count    the    enumerations
+        bullets += len(cell.find_all("ol"))
+        # count    font    tags
+        hasFormat += len(cell.find_all("font"))
+        hasFormat += len(cell.find_all("b"))
+        hasFormat += len(cell.find_all("i"))
+        hasFormat += len(cell.find_all("th"))
+        hasFormat += len(cell.find_all("small"))
+        # count    multiple - lines
+        multipleLine += multipleLine + len(cell.find_all("br"))
+        noLinksText = readHTML.getTagTextNoLinks(cell)
+        cspan=cell.get('colspan')
+        rspan=cell.get('rowspan')
+        if cspan!=None:
+            cspan=1
+        else:
+            cspan=0
+        if rspan!=None:
+            rspan=1
+        else:
+            rspan=0
+        cell.attrs = {}
+        text = str(cell)
+        length = len(text)
 
-    bsoup = BeautifulSoup(content)
-    #print(bsoup)
-    if "<td" in content:
-        cell = bsoup.find("td")
-    else:
-        cell = bsoup.find("th")
-    #print(cell)
-    links = readHTML.readTableCellLinks(cell)
-    # count   the    list
-    bullets += len(cell.find_all("ul"))
-    # count    the    enumerations
-    bullets += len(cell.find_all("ol"))
-    # count    font    tags
-    hasFormat += len(cell.find_all("font"))
-    hasFormat += len(cell.find_all("b"))
-    hasFormat += len(cell.find_all("i"))
-    hasFormat += len(cell.find_all("th"))
-    hasFormat += len(cell.find_all("small"))
-    # count    multiple - lines
-    multipleLine += multipleLine + len(cell.find_all("br"))
-    noLinksText = readHTML.getTagTextNoLinks(cell)
-    cspan=cell.get('colspan')
-    rspan=cell.get('rowspan')
-    if cspan!=None:
-        cspan=1
-    else:
-        cspan=0
-    if rspan!=None:
-        rspan=1
-    else:
-        rspan=0
-    cell.attrs = {}
-    text = str(cell)
-    length = len(text)
+        noLinksText = [s for s in noLinksText.strings if s.strip('\n ') != '']
+        noLinksText = " ".join(noLinksText)
+        if cspan ==1 or rspan==1:
+            hasSpan=1
+        else:
+            hasSpan=0
 
-    noLinksText = [s for s in noLinksText.strings if s.strip('\n ') != '']
-    noLinksText = " ".join(noLinksText)
-    if cspan ==1 or rspan==1:
-        hasSpan=1
-    else:
-        hasSpan=0
-    return {'length': length, 'bullets': bullets, 'hasFormat': hasFormat,
+        return {'length': length, 'bullets': bullets, 'hasFormat': hasFormat,
             'multipleLine': multipleLine, 'noLinksText': len(noLinksText), "links":len(links), "hasSpan":hasSpan}
+    except Exception as ex:
+        raise Exception("Error html cell")
+        #return {'length': 0, 'bullets': 0, 'hasFormat': 0,
+        #        'multipleLine': 0, 'noLinksText': 0, "links": 0, "hasSpan": 0}
 
 
 
@@ -335,21 +345,21 @@ def getColTableFeatures(relationsByCols, dictFeatures):
     dictFeatures[15]=len(potRelations)
     dictFeatures[16]=len(set(potRelations))
 
-    dictFeatures[50] = nsubj2 = len(subjs2)
-    dictFeatures[51] = nobj2 = len(objs2)
-    if nobj2>0:
-        dictFeatures[52] = nsubj2/nobj2
-    else:
-        #print("nobj2 0: ", nobj2)
-        dictFeatures[52] = nsubj2
-
-    dictFeatures[53] = nusubj2 = len(set(subjs2))
-    dictFeatures[54] = nuobj2 = len(set(objs2))
-    if nuobj2>0:
-        dictFeatures[55] = nusubj2/nuobj2
-    else:
-        #print("nuobj2 0: ", nuobj2)
-        dictFeatures[55] = nusubj2
+    # dictFeatures[50] = nsubj2 = len(subjs2)
+    # dictFeatures[51] = nobj2 = len(objs2)
+    # if nobj2>0:
+    #     dictFeatures[52] = nsubj2/nobj2
+    # else:
+    #     #print("nobj2 0: ", nobj2)
+    #     dictFeatures[52] = nsubj2
+    #
+    # dictFeatures[53] = nusubj2 = len(set(subjs2))
+    # dictFeatures[54] = nuobj2 = len(set(objs2))
+    # if nuobj2>0:
+    #     dictFeatures[55] = nusubj2/nuobj2
+    # else:
+    #     #print("nuobj2 0: ", nuobj2)
+    #     dictFeatures[55] = nusubj2
 
 
 def getColNameFeatures(predicate, colName1, colName2, dictFeatures):
@@ -475,7 +485,8 @@ def getCellFeatures(tableCell1, tableCell2, dictFeatures):
     # (24 & 25)  string   length in s & o    cells
     dictFeatures[24]=tableCell1.formatFeatures.get('length',0)
     dictFeatures[25]=tableCell2.formatFeatures.get('length',0)
-    # (26 & 27) formatting  present in s & o   cells
+    # (26 & 27) format
+    # ting  present in s & o   cells
     if tableCell1.formatFeatures.get('bullets',0)>0 or tableCell1.formatFeatures.get('hasFormat',0)>0 or \
         tableCell1.formatFeatures.get('multipleLine',0)>0:
         dictFeatures[26]=1
@@ -590,6 +601,7 @@ def extractFeatures(tables):
             traceback.print_exc()
             print("Error: ", name)
             continue
+    print('Finnnnn')
     dictClusterFeaturesByCols={}
     dictClusterPropertyByCols = {}
     for cols, featuresCluster in dictFeaturesCluster.items():
@@ -608,8 +620,10 @@ def getTriplesCluster(tables):
     cluster=tables[0].split("#")[0]
     relationsByTables, featuresTable, predsByTables, dictClusterFeaturesByCols, dictClusterPropertyByCols, totalRows=extractFeatures(tables)
     out=""
-    for table, relationsTable in relationsByTables.items():
+    keyst=list(relationsByTables.keys())
+    for table in keyst:
 
+        relationsTable=relationsByTables.get(table)
         dictFeatures = {i: 0 for i in range(1, 55)}
         #TABLE FEATURES
         dictFeatures.update(featuresTable.get(table))
@@ -651,9 +665,19 @@ def getTriplesCluster(tables):
                         featuresCluster = dictClusterFeaturesByCols.get(cols).get(pred.propId)
                         allFeatures = dictFeatures.copy()
                         allFeatures.update(featuresCluster)
-                        allFeatures[110] = totalRows
+
                         objectsBySubj = wikidataDAO.getObjBySubjProp(t.subj.id, pred.propId)
-                        allFeatures[49] = str(len(objectsBySubj))
+                        allFeatures[49] = str(objectsBySubj)
+                        subjByObj = wikidataDAO.getSubjByObjProp(t.obj.id, pred.propId)
+                        allFeatures[50] = str(subjByObj)
+
+                        allFeatures[60] = totalRows
+                        allFeatures[61] = allFeatures[58]/allFeatures[56]
+                        allFeatures[62] = allFeatures[59]/totalRows
+
+
+                        #objectsBySubj = wikidataDAO.getObjBySubjProp(t.subj.id, pred.propId)
+                        #allFeatures[49] = str(len(objectsBySubj))
                         outf = ""
                         for k in sorted(list(allFeatures.keys())):
                             outf += str(k) + ":" + str(allFeatures.get(k)) + "\t"
@@ -661,7 +685,7 @@ def getTriplesCluster(tables):
                         out += outf + cluster + "\t" + t.tableId + "\t" + t.pos + "\t" + cell1.colName + "\t" + cell2.colName + "\t" + t.subj.toString() + "\t" + pred.propId + " :" + pred.propName + "\t" + \
                             t.obj.toString() + "\n"
                         #fileout.write(
-                        #    outf + cluster + "\t" + t.tableId + "\t" + t.pos + "\t" + cell1.colName + "\t" + cell2.colName + "\t" + t.subj.toString() + "\t" + pred.propId + " :" + pred.propName + "\t" + \
+                        #   outf + cluster + "\t" + t.tableId + "\t" + t.pos + "\t" + cell1.colName + "\t" + cell2.colName + "\t" + t.subj.toString() + "\t" + pred.propId + " :" + pred.propName + "\t" + \
                         #    t.obj.toString() + "\n")
 
                     for predId in newPreds:
@@ -682,9 +706,14 @@ def getTriplesCluster(tables):
                         featuresCluster = dictClusterFeaturesByCols.get(cols).get(pred.propId)
                         allFeatures = dictFeatures.copy()
                         allFeatures.update(featuresCluster)
-                        allFeatures[110] = totalRows
                         objectsBySubj = wikidataDAO.getObjBySubjProp(t.subj.id, pred.propId)
-                        allFeatures[49] = str(len(objectsBySubj))
+                        allFeatures[49] = str(objectsBySubj)
+                        subjByObj = wikidataDAO.getSubjByObjProp(t.obj.id, pred.propId)
+                        allFeatures[50] = str(subjByObj)
+
+                        allFeatures[60] = totalRows
+                        allFeatures[61] = allFeatures[58] / allFeatures[56]
+                        allFeatures[62] = allFeatures[59] / totalRows
                         outf = ""
                         for k in sorted(list(allFeatures.keys())):
                             outf += str(k) + ":" + str(allFeatures.get(k)) + "\t"
@@ -712,9 +741,15 @@ def getTriplesCluster(tables):
                         featuresCluster = dictClusterFeaturesByCols.get(cols).get(pred.propId)
                         allFeatures = dictFeatures.copy()
                         allFeatures.update(featuresCluster)
-                        allFeatures[110] = totalRows
                         objectsBySubj = wikidataDAO.getObjBySubjProp(t.subj.id, pred.propId)
-                        allFeatures[49] = str(len(objectsBySubj))
+                        allFeatures[49] = str(objectsBySubj)
+                        subjByObj = wikidataDAO.getSubjByObjProp(t.obj.id, pred.propId)
+                        allFeatures[50] = str(subjByObj)
+
+                        allFeatures[60] = totalRows
+                        allFeatures[61] = allFeatures[58] / allFeatures[56]
+                        allFeatures[62] = allFeatures[59] / totalRows
+
                         outf=""
                         for k in sorted(list(allFeatures.keys())):
                             outf += str(k) + ":" + str(allFeatures.get(k)) + "\t"
@@ -724,24 +759,25 @@ def getTriplesCluster(tables):
                         #fileout.write(
                         #    outf + cluster + "\t" + t.tableId + "\t" + t.pos + "\t" + cell1.colName + "\t" + cell2.colName + "\t" + t.subj.toString() + "\t" + pred.propId + " :" + pred.propName + "\t" + \
                         #    t.obj.toString() + "\n")
+        del relationsByTables[table]
     #return out #+"RESULT"+cluster+"\t"+str(dictClusterPropertyByCols)+"\n"
     del relationsByTables
     del featuresTable
     del predsByTables
     del dictClusterFeaturesByCols
     del dictClusterPropertyByCols
+    gc.collect()
     return out
 
 def process(input=0):
     # for each document that we want to process,
-
     #files = os.listdir(path)
     cluster =""
     listClusters=[]
     clustert=[]
     cont=0
-    #with open(FILE_OUTPUT, "w") as fout:
-    with gzip.open(FILE_CLUSTER, "rt") as fi:
+    with gzip.open(FILE_OUTPUT, "wt") as fout:
+        with gzip.open(FILE_CLUSTER, "rt") as fi:
             for line in fi:
                 if cont==0:
                     cont+=1
@@ -749,17 +785,10 @@ def process(input=0):
                 cont+=1
                 _line=line.replace("\n","").split("\t")
 
-                if int(_line[0])>1000:
+                if int(_line[0])>=38739: # and int(_line[0])<=600000:
                     if cluster!=_line[0] and cluster!='':
                         #getTriplesCluster(clustert, fout)
-                        #out=getTriplesCluster(clustert,fout)
-                        #if out=="":
-                        #    print("Cluster no relations found: ", cluster)
-                        #else:
-                        #    fout.write(out)
-                        #gc.collect()
-                        #    print("****************************")
-                        #    print("CLuster ok:", _line[0])
+
                         copyCluster=clustert[:]
                         listClusters.append(copyCluster)
                         clustert=[_line[0]+"#"+_line[1]]
@@ -771,21 +800,12 @@ def process(input=0):
                 copyCluster = clustert[:]
                 listClusters.append(copyCluster)
                 #getTriplesCluster(clustert, fout)
-                #out=getTriplesCluster(clustert)
-                #if out == "":
-                #    print("Cluster no relations found: ", cluster)
-                #else:
-                #    fout.write(out)
-                #gc.collect()
-                #    print("Cluster Ok 2")
+
 
     print("Total custers:", len(listClusters))
     for cluster in listClusters:
         print('len cluster', len(cluster))
         yield cluster
-    #lines=file.readlines()
-    #files=['1#524269.20','1#708040.3']
-    #yield files #.replace("_",".").replace(".json","")
 
     # This will shutdown the entire pipeline once everything is done.
     yield Pipey.STOP
@@ -798,7 +818,6 @@ def processClusters(tables):
     result = getTriplesCluster(tables)
     yield result
 
-
 if __name__ == '__main__':
 
     args = sys.argv[1:]
@@ -808,6 +827,7 @@ if __name__ == '__main__':
     wikidataDAO = WikidataDAO(params)
     wikidataDAO.fillData()
     wikidataDAO.fillDomainRange()
+    wikidataDAO.fillSubjObjCount()
     textProcessing = TextProcessing()
     FILE_CLUSTER=args[0]
     FILE_OUTPUT=args[1]
@@ -818,4 +838,3 @@ if __name__ == '__main__':
     pipeline.add(processClusters, 8)
     pipeline.add(ResultCombiner(FILE_OUTPUT))
     pipeline.run(100)
-

@@ -30,6 +30,18 @@ def getCluster0(fileAllTables, fileTablesRelations):
     df = pd.merge(dfPairRel, df, on=['table', 'cols'], how='left')
     df.to_csv("cluster0.csv", sep="\t", index=False, columns=["cluster", "table", "cols", "relations", "all_relations"])
 
+def getRelationsByCluster(fileCluster):
+    df = pd.read_csv(fileCluster, sep="\t", names=["cluster","table", "cols", "relations"], dtype={"table": str},
+                     )
+    dfPairRel = pd.DataFrame({"all_relations": df.dropna().groupby(['cluster', 'cols'])['relations'].
+                             apply(lambda x: " ".join(x))}).reset_index()
+    print(dfPairRel.head(2))
+    dfPairRel["all_relations"] = dfPairRel["all_relations"].apply(lambda x: set(x.split(" ")))
+    print(dfPairRel.head(2))
+    df = pd.merge(dfPairRel, df, on=['cluster', 'cols'], how='left')
+    df.to_csv('cluster2AllRelations.csv', sep='\t', index=False)
+    print(df.head(10))
+
 def getCluster1(fileAllTables, fileTablesRelations):
     dfAllTables = pd.read_csv(fileAllTables, sep="\t",
                               dtype={"table": str}, index_col=False,  compression='gzip')
@@ -79,15 +91,24 @@ def getCluster2(fileCluster1, fileMaxRel):
 
 def getCluster2Merge(fileCluster1, fileCluster2):
     df_cluster1=pd.read_csv(fileCluster1, sep="\t",dtype={"table":str})
+    df_cluster1=df_cluster1[df_cluster1['cluster'] != 'cluster']
     df_cluster1 = df_cluster1[['cluster','table','cols','relations']].rename(columns={'cluster': 'cluster1'})
-
+    print(df_cluster1.head())
     df_cluster2 = pd.read_csv(fileCluster2, sep="\t", names=["cluster1", "cluster2", "table"],dtype={"table": str})
     dfCluster = pd.DataFrame({"count": df_cluster2.groupby(['cluster2']).size()}).reset_index()
     dfCluster = dfCluster.sort_values("count", ascending=False).reset_index(drop=True)
     df_cluster2 = df_cluster2.join(dfCluster.set_index("cluster2"), on=["cluster2"])
+    df_cluster2 = df_cluster2.sort_values('cluster1')
+    print(df_cluster2.head())
 
-    cluster2 = pd.merge(df_cluster2, df_cluster1, on=['cluster1','table'], how='left')
+    df_cluster1['cluster1'] = df_cluster1['cluster1'].astype(int)
+    df_cluster2['cluster1'] = df_cluster2['cluster1'].astype(int)
+    cluster2 = df_cluster2.join(df_cluster1.set_index(['cluster1','table']), on=['cluster1','table'])
+    #cluster2 = pd.merge(df_cluster1, df_cluster2, on=['cluster1','table'], how='left')
     print(cluster2.head(2))
+    print(df_cluster1[df_cluster1['table']=='32162.24'])
+    print(df_cluster2[df_cluster2['table'] == '32162.24'])
+    print(cluster2[cluster2['table'] == '32162.24'])
     cluster2 = cluster2.rename(columns={'cluster2': 'cluster'})
     dfPairRel = pd.DataFrame({"all_relations": cluster2.dropna().groupby(['cluster', 'cols'])['relations'].apply(
         lambda x: " ".join(x))}).reset_index()
@@ -98,7 +119,7 @@ def getCluster2Merge(fileCluster1, fileCluster2):
 
     #dfGeneral = pd.read_csv("generalCluster1.csv", sep="\t", dtype={"table": str})
     #cluster2=cluster2[['cluster','table','count']].drop_duplicates()
-    #print(cluster2.count())
+    #print(cluster2.count())+
     #cluster2 = cluster2.rename(columns={'cluster': 'cluster2', 'count': 'tables_cluster2'})
     #print(cluster2.head(2))
     #dfGeneral = dfGeneral.join(cluster2.set_index(["table"]), on=["table"])
@@ -109,7 +130,7 @@ def getCluster2Merge(fileCluster1, fileCluster2):
 
 
 def clusteringPairRelation(fileConflicts, fileRels):
-    fout = open("cluster2_1.csv", "w")
+    fout = open("cluster2_1_nop.csv", "w")
     f1 = open(fileConflicts, "r")
     dictPairConflict = {}
     for line in f1.readlines():
@@ -124,6 +145,8 @@ def clusteringPairRelation(fileConflicts, fileRels):
         dictPairConflict[_line[0]+"#"+_line[1]] = val
     f1.close()
     df=pd.read_csv(fileRels, sep="\t", usecols=['cluster','table', 'cols','max_rel'],dtype={'table':str})
+
+    print(df.head(5))
     setheaders=set(df['cluster'].tolist())
     dictSetHeadersCount={}
     print("Tables: ", len(setheaders))
@@ -135,11 +158,15 @@ def clusteringPairRelation(fileConflicts, fileRels):
         print("Cont: ",contset)
         contset+=1
         df1=df[df['cluster']==seth]
+        df1 = df1.fillna('$$')
         #print('Group size: ', df1.shape, seth)
         g1 = df1.groupby(['cols', 'max_rel'])['table'].apply(lambda x: "{'%s'}" % "', '".join(x))
         dictpairs = {}
 
         for (pair, rel), value in g1.iteritems():
+            #print('rel ',rel, value)
+            #if rel ==None:
+            #    print('pair: ', pair, rel)
             if dictpairs.get(pair) == None:
                 dictpairs[pair] = {}
             dictpairs[pair][rel] = set(eval(value))
@@ -148,35 +175,43 @@ def clusteringPairRelation(fileConflicts, fileRels):
         noconf={}
         for col, rels in dictpairs.items():
             keyp = list(rels.keys())
+
             noconflict = []
-            emp = []
+            emp=[]
             for i in range(len(keyp)):
                 for j in range(i + 1, len(keyp)):
                     pair = [keyp[i], keyp[j]]
                     pair.sort()
+
                     conf = dictPairConflict.get(
                         pair[0].replace("[", "").replace("]", "") + "#" + pair[1].replace("[", "").replace("]", ""))
                     if conf!=None:
-                        if conf >= 1:
-                            emp.append(pair[0])
-                            emp.append(pair[1])
-                            noconflict.append(pair)
+                        if conf >= 0.5:
+                            emp.extend(pair)
                             noconf[col+str(pair)] = conf
+                            noconflict.append(pair)
 
-
-            indiv = set(keyp) - set(noconflict)
+            #print('keyp', keyp, 'noconflict', noconflict)
+            indiv = set(keyp) - set(emp)
             for ind in indiv:
-                tempcluster[col+ind] = rels.get(ind)
-                noconf[col+ind] = 1
+                tempcluster[col+str(ind)] = rels.get(ind)
+                noconf[col+str(ind)] = 1
             #print("temp cluster", list(tempcluster.keys()))
+
             for pair in noconflict:
+
                 tempcluster[col+str(pair)] = set()
                 tab1 = rels.get(pair[0])
-                tab2 = rels.get(pair[1])
-                tempcluster[col+str(pair)].extend(tab1)
-                tempcluster[col+str(pair)].extend(tab2)
 
+                tab2 = rels.get(pair[1])
+
+                if tab1 is not None:
+                    tempcluster[col + str(pair)]=tempcluster[col+str(pair)].union(tab1)
+                if tab2 is not None:
+                    tempcluster[col + str(pair)]=tempcluster[col+str(pair)].union(tab2)
+        #print(tempcluster)
         noconf = sorted(noconf.items(), key=lambda kv: kv[1])
+        #print(noconf)
         for nvi in range(len(noconf)):
                 for nvj in range(nvi + 1, len(noconf)):
                     rel1k = noconf[nvi][0]
@@ -192,11 +227,13 @@ def clusteringPairRelation(fileConflicts, fileRels):
                         tempcluster[rel1k] = tempcluster[rel1k] - tempcluster[rel2k]
         for ktc, vtc in tempcluster.items():
             if len(vtc)>0:
-                clusters[str(seth)+"#"+str(numcluster)]=vtc
+                for tab in vtc:
+                    fout.write(str(seth)+ "\t"+str(numcluster) + "\t" + tab + "\n")
+                #clusters[str(seth)+"#"+str(numcluster)]=vtc
                 numcluster+=1
-    for k, v in clusters.items():
-        for tab in v:
-            fout.write(k.replace("#","\t") + "\t" + tab +"\n")
+    #for k, v in clusters.items():
+    #    for tab in v:
+    #        fout.write(k.replace("#","\t") + "\t" + tab +"\n")
     fout.close()
 
 if __name__ == '__main__':
@@ -216,5 +253,8 @@ if __name__ == '__main__':
 
     if args[0] == "5":
         mergeCluster1_2(args[1], args[2])
+
+    #getRelationsByCluster('clusterRelations.csv')
+    #getCluster2Merge('cluster2AllRelations.csv', 'cluster2_1.csv')
 
     print("Time execution: ", time.time()-starttime)

@@ -48,9 +48,9 @@ class FeaturesCluster(object):
             rowsProperty=self.rowsByProperty.get(prop,0)
             if rowsProperty==0:
                 print("error1")
-            dictp={101: subj, 102: obj, 103: usubj, 104: uobj, 105: prelations, \
-                                          106: uprelations, 107: len(relations), 108: len(set(relations)),\
-                                          109: rowsProperty}
+            dictp={51: subj, 52: obj, 53: usubj, 54: uobj, 55: prelations, \
+                                          56: uprelations, 57: len(relations), 58: len(set(relations)),\
+                                          59: rowsProperty, 60:0}
             if self.dictFeatures.get(self.cols)==None:
                 self.dictFeatures[self.cols] = {prop: dictp}
             else:

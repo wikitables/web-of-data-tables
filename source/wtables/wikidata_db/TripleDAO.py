@@ -12,16 +12,17 @@ def insertTriplesFromFile(fileTriples, user, eval, exist, cluster_relation):
             subj, subj_id, obj, obj_id, pred, pred_id, exist, evaluation,username, date,cluster_relation, features, triple_id) VALUES 
             (%s, %s, %s, %s, %s, %s,%s, 
             %s, %s, %s, %s, %s, %s, %s, %s, %s,%s, %s,%s,%s);"""
-    with gzip.open(fileTriples, "rt") as fileT:
+    with open(fileTriples, "r") as fileT:
         try:
             for line in fileT:
                 _line=np.array(line.replace("\n","").split("\t"))
-                features = "\t".join(_line[0:53])
-                triple=_line[53:len(_line)]
+                features = "\t".join(_line[0:65])
+                triple=_line[65:len(_line)]
                 cluster=triple[0]
                 table_id = triple[1]
                 row_col = triple[2].split(":")
                 index_row=row_col[0]
+                print (triple)
                 index_col1 = row_col[1]
                 index_col2 = row_col[2]
                 name_col1 = triple[3]
@@ -78,5 +79,4 @@ if __name__ == '__main__':
         clusterEval=True
     else:
         clusterEval=False
-
-    insertTriplesFromFile(file,user,eval, exist,clusterEval)
+    insertTriplesFromFile(file, user, eval, exist, clusterEval)

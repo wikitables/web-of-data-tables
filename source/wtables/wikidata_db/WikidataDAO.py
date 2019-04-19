@@ -74,35 +74,32 @@ class WikidataDAO(object):
         #obj = self.wikidataSparql.getObject(wdSubj, wdtProp)
         prop = self.dictSubjProp.get(wdSubj)
         if prop == None:
-            return []
+            return 0
         else:
             obj=prop.get(wdtProp)
             if obj==None:
-                return []
+                return 0
             else:
                 return obj
 
-    def existObject(self, wdSubj, wdtProp, wdObj):
-        if "-1" in wdtProp:
-            subj = self.dictSubjProp.get(wdSubj)
-            if subj != None:
-                objs = self.dictSubjProp.get(wdSubj).get(wdtProp)
-                if objs != None:
-                    for obj in objs:
-                        if obj == wdObj:
-                            return 1
+    def getSubjByObjProp(self, wdObj, wdtProp):
+        #obj = self.wikidataSparql.getObject(wdSubj, wdtProp)
+        prop = self.dictObjProp.get(wdObj)
+        if prop == None:
+            return 0
+        else:
+            subj=prop.get(wdtProp)
+            if subj==None:
+                return 0
+            else:
+                return subj
 
-        return 0
-
-
-    def existObject(self, wdSubj, wdtProp, wdObj):
-        subj = self.dictSubjProp.get(wdSubj)
-        if subj != None:
-            objs = self.dictSubjProp.get(wdSubj).get(wdtProp)
-            if objs != None:
-                for obj in objs:
-                    if obj == wdObj:
-                        return 1
+    def exist(self, wdSubj, wdtProp, wdObj):
+        rels = self.getRelations(wdSubj, wdObj)
+        if rels != None:
+            for rel in rels:
+                if wdtProp ==rel:
+                    return 1
         return 0
 
 
@@ -211,6 +208,32 @@ class WikidataDAO(object):
                 # dictClasses[k] = float(v) / total
                 self.dictClassRange[property] = set(list(classp.keys()))  # dictClasses
 
+    def fillSubjObjCount(self):
+        folder = self.fileParams.get('wikidata_files')
+        fileSubjPred = os.path.join(folder, self.fileParams.get('wikidata_subj_pred'))
+        fileObjPred = os.path.join(folder, self.fileParams.get('wikidata_obj_pred'))
+        with gzip.open(fileSubjPred, "rt") as fileIn:
+            for line in fileIn:
+                _line = line.replace("\n", "").split("\t")
+                subj = _line[0]
+                pred = _line[1]
+                count = _line[2]
+                subjex = self.dictSubjProp.get(subj)
+                if subjex != None:
+                    self.dictSubjProp[subj][pred]=count
+                else:
+                    self.dictSubjProp[subj]= {pred: count}
+        with gzip.open(fileObjPred, "rt") as fileIn:
+            for line in fileIn:
+                _line = line.replace("\n", "").split("\t")
+                obj = _line[0]
+                pred = _line[1]
+                count = _line[2]
+                objex = self.dictObjProp.get(obj)
+                if objex!= None:
+                    self.dictObjProp[obj][pred]=count
+                else:
+                    self.dictObjProp[obj]= {pred: count}
 
     def fillData(self):
         folder = self.fileParams.get('wikidata_files')
@@ -219,7 +242,6 @@ class WikidataDAO(object):
         filePropStats = os.path.join(folder, self.fileParams.get('wikidata_prop_stats'))
         fileLinks = os.path.join(folder, self.fileParams.get('wikidata_links'))
         fileRelations = os.path.join(folder, self.fileParams.get('wikidata_rels'))
-        fileSubjPred = os.path.join(folder, self.fileParams.get('wikidata_subj_pred'))
 
         with open(filePropWikidata, "r") as fileProp:
             for line in fileProp:
@@ -264,17 +286,6 @@ class WikidataDAO(object):
                 else:
                     self.dictRelations[subj] = {obj: {prop}}
 
-        with gzip.open(fileSubjPred, "rt") as fileIn:
-            for line in fileIn:
-                _line = line.replace("\n", "").split("\t")
-                subj = _line[0]
-                prop = _line[1]
-                count = _line[2]
-                subjex = self.dictSubjProp.get(subj)
-                if subjex != None:
-                    self.dictSubjProp[subj][prop]=count
-                else:
-                    self.dictSubjProp[subj]= {prop: count}
 
 class PropertyStat(object):
     def __init__(self, propId, propName):
@@ -307,5 +318,6 @@ if __name__ == '__main__':
     wikidataDAO = WikidataDAO(params)
     wikidataDAO.fillData()
     wikidataDAO.fillDomainRange()
-    print(wikidataDAO.getObjBySubjProp('Q1000001', 'P136'))
+    print(wikidataDAO.getObjBySubjProp('Q100', 'P1360'))
+    print(wikidataDAO.getSubjByObjProp('Q100', 'P1360'))
     print(wikidataDAO.getRelations('Q1802055', 'Q936187'))
