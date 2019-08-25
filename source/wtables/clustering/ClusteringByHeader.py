@@ -117,18 +117,6 @@ def getCluster2Merge(fileCluster1, fileCluster2):
     cluster2 = pd.merge(dfPairRel, cluster2, on=['cluster', 'cols'], how='left')
     cluster2.to_csv("cluster2_2.csv", sep="\t", index=False, columns=["cluster","table", "cols", "relations", "all_relations"])
 
-    #dfGeneral = pd.read_csv("generalCluster1.csv", sep="\t", dtype={"table": str})
-    #cluster2=cluster2[['cluster','table','count']].drop_duplicates()
-    #print(cluster2.count())+
-    #cluster2 = cluster2.rename(columns={'cluster': 'cluster2', 'count': 'tables_cluster2'})
-    #print(cluster2.head(2))
-    #dfGeneral = dfGeneral.join(cluster2.set_index(["table"]), on=["table"])
-    #dfGeneral.to_csv("generalCluster2_2.csv", sep="\t", index=False,
-    #                 columns=['header', 'table', 'cluster0_1', 'tables_cluster0_1', 'cluster0_2', 'tables_cluster0_2',
-    #                          'cluster1', 'tables_cluster1','cluster2', 'tables_cluster2']
-    #                 )
-
-
 def clusteringPairRelation(fileConflicts, fileRels):
     fout = open("cluster2_1_nop.csv", "w")
     f1 = open(fileConflicts, "r")
@@ -253,8 +241,5 @@ if __name__ == '__main__':
 
     if args[0] == "5":
         mergeCluster1_2(args[1], args[2])
-
-    #getRelationsByCluster('clusterRelations.csv')
-    #getCluster2Merge('cluster2AllRelations.csv', 'cluster2_1.csv')
 
     print("Time execution: ", time.time()-starttime)

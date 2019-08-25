@@ -31,7 +31,7 @@ def random_sampler(ftriples, k, fout):
 
     with gzip.open(ftriples, 'rt') as f:
         f.seek(0)
-        n=65645207
+        n=167003858
         random_linenos = sorted([random.randrange(0,n,1) for i in range(k)], reverse = True)
         print("lines-->",random_linenos)
         lineno = random_linenos.pop()

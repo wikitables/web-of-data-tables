@@ -22,6 +22,7 @@ class WikidataDAO(object):
         self.dictObjProp = {}
         self.dictEntityClasses = {}
         self.fileParams = fileParams
+        self.dictEntityMaxClass ={}
         #self.wikidataSparql = WikidataSparql()
         #self.wikidataIndex= WikidataIndex(self.fileParams)
 
@@ -126,12 +127,15 @@ class WikidataDAO(object):
     def getClasses(self, entity):
         return self.dictEntityClasses.get(entity)
 
+    def getMaxClass(self, entity):
+        return self.dictEntityMaxClass.get(entity)
+
 
     def isInDomain(self, wdSubj, pred):
         entityWD1_classes = self.getClasses(wdSubj)
         # print("classes Domain: ", pred, wdSubj,entityWD1_classes)
         if entityWD1_classes is None:
-            return 1
+            return 2
         domain = self.getDomain(pred)
         intersectDomain = set(entityWD1_classes).intersection(domain)
         if len(intersectDomain) > 0:
@@ -144,7 +148,7 @@ class WikidataDAO(object):
         entityWD2_classes = self.getClasses(wdObj)
         # print("classes range", pred, wdObj, entityWD2_classes)
         if entityWD2_classes is None:
-            return 1
+            return 2
         range = self.getRange(pred)
         intersectRange = set(entityWD2_classes).intersection(range)
         if len(intersectRange) > 0:
@@ -235,6 +239,16 @@ class WikidataDAO(object):
                 else:
                     self.dictObjProp[obj]= {pred: count}
 
+    def fillEntityMaxClass(self):
+        folder = self.fileParams.get('wikidata_files')
+        fileMaxClass = os.path.join(folder, self.fileParams.get('wikidata_max_class'))
+        with gzip.open(fileMaxClass, "rt") as fin:
+            for line in fin:
+                _line=line.replace("\n","").split("\t")
+                self.dictEntityMaxClass[_line[0]]=_line[1]
+
+
+
     def fillData(self):
         folder = self.fileParams.get('wikidata_files')
         filePropWikidata = os.path.join(folder, self.fileParams.get('wikidata_prop'))
@@ -316,7 +330,7 @@ class PropertyStat(object):
 if __name__ == '__main__':
     params = ConfigProperties().loadProperties()
     wikidataDAO = WikidataDAO(params)
-    wikidataDAO.fillData()
+    #wikidataDAO.fillData()
     wikidataDAO.fillDomainRange()
     print(wikidataDAO.getObjBySubjProp('Q100', 'P1360'))
     print(wikidataDAO.getSubjByObjProp('Q100', 'P1360'))

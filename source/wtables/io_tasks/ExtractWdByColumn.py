@@ -1,20 +1,9 @@
-from wtables.schema.Article import *
-import os
-
-from wtables.features_cluster.FeaturesCluster import FeaturesCluster
-from wtables.features_cluster.RelationCell import RelationCell
-from wtables.features_cluster.Resource import Resource
-from wtables.features_cluster.FeaturesTableCell import TableCell
-from wtables.features_cluster.FeaturesTriple import TripleFeatures
 from wtables.preprocessing import ReadHTML as readHTML
 from wtables.preprocessing.TextProcessing import TextProcessing
 from wtables.schema.Article import *
-from wtables.wikidata_db.ConfigProperties import ConfigProperties
+from wtables.schema.Resource import Resource
 from wtables.wikidata_db.WikidataDAO import *
-import traceback
-import random
-import gc
-from bs4 import Tag
+
 
 def extractTableFile(tableId):
     #Read tables from main directory

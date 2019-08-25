@@ -10,6 +10,7 @@ class FeaturesCluster(object):
         self.rowsByProperty = {}
         self.dictFeatures={}
         self.totalRows=0
+        self.numRelationsWithPredicate=0
 
     def addRowsByProperty(self, prop):
         if self.rowsByProperty.get(prop) is None:
@@ -35,6 +36,9 @@ class FeaturesCluster(object):
     def addRelations(self, relations):
         self.relations.extend(relations)
 
+    def addRelationsWithPredicate(self, number):
+        self.numRelationsWithPredicate+=number
+
     def calcFeatures(self):
         subj = len(self.subjects)
         usubj = len(set(self.subjects))
@@ -50,7 +54,7 @@ class FeaturesCluster(object):
                 print("error1")
             dictp={51: subj, 52: obj, 53: usubj, 54: uobj, 55: prelations, \
                                           56: uprelations, 57: len(relations), 58: len(set(relations)),\
-                                          59: rowsProperty, 60:0}
+                                          59: rowsProperty, 60:0, 66:self.numRelationsWithPredicate}
             if self.dictFeatures.get(self.cols)==None:
                 self.dictFeatures[self.cols] = {prop: dictp}
             else:

@@ -24,6 +24,37 @@ def extractEntityInstances(fileTripleInstances):
                         classes =set()
                         classes.add(split[2])
 
+def countInstancesByClass(fileClasses):
+    count=0
+    dictClasses={}
+    with gzip.open(fileClasses, "rt") as fileIn:
+            for line in fileIn:
+                print("Line: ", count)
+                count+=1
+                instance=line.replace("\n","").split("\t")
+                classes=eval(instance[1])
+                for classi in classes:
+                    if dictClasses.get(classi) is None:
+                        dictClasses[classi]=1
+                    else:
+                        dictClasses[classi]+=1
+    count=0
+    with gzip.open('numInstancesByClass.out.gz', 'wt') as fout:
+        with gzip.open(fileClasses, "rt") as fileIn:
+            for line in fileIn:
+                print("Line: ", count)
+                count += 1
+                instance = line.replace("\n", "").split("\t")
+                classes = eval(instance[1])
+                classesNumber={}
+                for classi in classes:
+                    classesNumber[classi]=dictClasses.get(classi)
+                sortedClassesNumber = sorted(classesNumber.items(), key=lambda kv: kv[1])
+                for classv in sortedClassesNumber:
+                    classesNumber[classv[0]]=classv[1]
+                fout.write(instance[0]+"\t"+str(classesNumber)+"\n")
+
+
 if __name__ == '__main__':
     args = sys.argv[1:]
-    extractEntityInstances(args[0])
+    countInstancesByClass(args[0])

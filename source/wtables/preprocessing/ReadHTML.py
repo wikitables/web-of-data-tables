@@ -489,7 +489,7 @@ def getColHeaderAllLevels(htmlMatrix, startRow,textProcessing):
             text = " ".join([s for s in cell.strings if s.strip('\n ') != ''])
             text = text.replace("*", "").replace("@", "")
             cleanTagHeaders.append(text)
-            cleanTagHeaders = [textProcessing.cleanCellHeader(h) for h in cleanTagHeaders]
+        cleanTagHeaders = [textProcessing.cleanCellHeader(h) for h in cleanTagHeaders]
         headersMatch.append(cleanTagHeaders)
     lastRow = headersMatch[len(headersMatch) - 1]
     headersMatch[len(headersMatch) - 1] = ['spancol' if h == '' else h for h in lastRow]

@@ -5,7 +5,7 @@ from nltk.stem.porter import PorterStemmer
 import re
 #import textdistance
 from similarity.jarowinkler import JaroWinkler
-from similarity.sorensen_dice import SorensenDice
+#from similarity.sorensen_dice import SorensenDice
 
 class TextProcessing(object):
 
@@ -13,7 +13,7 @@ class TextProcessing(object):
 
         self.stemmer=SnowballStemmer("english")
         self.jaroWinkler = JaroWinkler()
-        self.diceScore = SorensenDice()
+        self.diceScore = None#SorensenDice()
 
     def removeStopWords(slef,text):
         stopList = {'the', 'of', 'by', 'in', 'on', 'at', 'for', 'an'}
@@ -56,11 +56,39 @@ class TextProcessing(object):
 
         return pos+result.strip().replace(" ","_")
 
+    def cleanForSimilarity(self, text):
+        if "protag_article" in text:
+            return ""
+        if "__" in text:
+            cleant=text.split("__")[1]
+        else:
+            cleant=text
+
+        if " :" in cleant:
+            cleant=cleant.split(" :")[1]
+        if "@en" in cleant:
+            cleant = cleant.split("@")[0]
+            cleant=[self.stemmer.stem(t) for t in cleant.split(" ")]
+            cleant="".join(cleant)
+
+        cleant= cleant.replace("*","").replace("_","").replace("spancol","").split("@")[0]
+
+
+        return cleant
+
+
 
     def textSimilarity(self,text1, text2):
-        score1=self.jaroWinkler.similarity(text1,text2)
-        score2 = self.diceScore.similarity(text1,text2)
-        return min([score1, score2])
+        #print("text inicial: ", text1, text2)
+        t1=self.cleanForSimilarity(text1)
+        t2 = self.cleanForSimilarity(text2)
+        if len(t1)==0 and len(t2)==0:
+            return 0
+        score1 = self.jaroWinkler.similarity(t1,t2)
+        score2 = self.diceScore.similarity(t1,t2)
+        mins= min([score1, score2])
+        #print(t1,t2,mins)
+        return mins
 
 
     def cleanCellHeader(self, cellText):
@@ -118,6 +146,10 @@ class TextProcessing(object):
 
 if __name__ == '__main__':
     tp=TextProcessing()
+    print(tp.cleanForSimilarity("2__dadad@1"))
+    print(tp.cleanForSimilarity("dadad**dad_adad@2"))
+    print(tp.cleanForSimilarity("P3: dada d24234"))
+    print(tp.textSimilarity("candid@3","successful candidate@en"))
     print(tp.stemmer.stem('easily'))
     #print(tp.textSimilarity('protag_article', 'has part'))
     """

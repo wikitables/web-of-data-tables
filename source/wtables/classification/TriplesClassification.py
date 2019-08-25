@@ -29,17 +29,11 @@ def getDataChunks(file, sep, decimalPoint, fileMax, fileMin):
         X = xf.values
         print('predict')
         print(xf.columns)
-        #print("shape: ", X.shape)
-        #print('max',xf.max())
         yield X
 
 def normalize(xf, maxValues, minValues):
     result = xf.copy()
-    #maxValues=maxValues.to_dict()
-    #minValues=minValues.to_dict()
-
     for feature_name in xf.columns:
-
         max_value = maxValues[str(feature_name)]
         min_value = minValues[str(feature_name)]
         if max_value==0:
@@ -49,11 +43,9 @@ def normalize(xf, maxValues, minValues):
     return result
 
 def prepareDataNormalized(x, maxValues, minValues):
-
     noImportant = ['21', '22', '23', '38', '43', '44']
-    noNormalized = ['7', '8', '26', '27', '37', '39', '40', '63', '64','65']
+    noNormalized = ['7', '8', '26', '27', '37', '39', '40', '64']
     r1 = [str(i) for i in np.arange(2,66) if str(i) not in noNormalized and str(i) not in noImportant]
-
     x1=x[r1]
     # new = '39','40','45','46'
     x2 = x[noNormalized]
@@ -63,49 +55,10 @@ def prepareDataNormalized(x, maxValues, minValues):
     xf = pd.concat([x1, x2], axis=1, sort=False)
 
     colnames = {col: int(col) for col in list(xf.columns)}
-
     xf = xf.rename(columns=colnames)
     xf = xf.sort_index(axis=1)
-    print('columns: ', xf.columns)
-
     return xf
 
-
-def prepareData(x):
-    print('head preparation:')
-    print(x.head(2))
-    print(x[['60']].head(2))
-
-    noImportant=['21','22','23','38','43','44','63']
-    r1 = [str(i) for i in np.arange(2,65) if str(i) not in noImportant]
-
-    xf=x[r1]
-    # new = '39','40','45','46'
-
-    colnames = {col: int(col) for col in list(xf.columns)}
-
-    xf = xf.rename(columns=colnames)
-    xf = xf.sort_index(axis=1)
-    print("final features", xf.columns)
-
-    return xf
-
-def prepareTrainingData(csvTraining, sep, decimalPoint):
-    data = pd.read_csv(csvTraining,sep=sep, decimal=decimalPoint, index_col=False)
-    data = data[(data['VALIDATION'] < 3) & (data['VALIDATION'] > 0)].reset_index(drop=True)
-    #data1 = data[data['ORIGIN'] == 'f']  # 489 #380
-
-    maxValues=data.max()
-    minValues = data.min()
-    xf=prepareDataNormalized(data, maxValues, minValues)
-    print('training: ', xf.columns)
-    print('target: ', data.columns[60])
-    #print(xf.columns)
-    # print(xf.head(2))
-    X = xf.values
-    y=data.iloc[:,60].values
-
-    return X, y
 
 def trainingModels(X, y):
     warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -194,29 +147,23 @@ def trainingFinalModel(csvTrainedData, model):
     filename = 'trainedModelRF.sav'
     pickle.dump(model, open(filename, 'wb'))
 
-def predictData(modelFile, csvData, fileMax, fileMin):
-    ft=open(csvData, 'r').read()
+def predictData(modelFile, csvData, predictionsFile, predictionsProbaFile):
+    print(modelFile)
     model = pickle.load(open(modelFile, 'rb'))
     cont=0
-    feature_65 = pd.read_csv('../files/numTablesByCluster.csv.gz', sep="\s+", compression='gzip', index_col=False)
-    feature_65 = feature_65.rename(columns={'cluster': '63', '1': '65'})
-    with gzip.open('predictions_X_proba.csv.gz', 'wt') as fout_proba:
-        with gzip.open('predictions_X.csv.gz', 'wt') as fout:
+    #feature_65 = pd.read_csv('../files/numTablesByCluster.csv.gz', sep="\s+", compression='gzip', index_col=False)
+    #feature_65 = feature_65.rename(columns={'1': '65'})
+    #features=['4', '5', '6', '7', '8', '11', '12', '13', '14', '17', '18', '19', '20', '24', '25', '30', '31', '32', '34', '36', '41', '42', '47', '48', '49', '50', '53', '54', '61', '62', '63']
+    features=['6', '7', '8', '11', '12', '13', '14', '15', '16', '17', '18', '24', '25', '26', '27', '28', '29', '30', '39', '40', '41', '42', '45', '46', '47', '48', '49', '50', '62', '63', '65', 'VALIDATION'] 
+    with gzip.open(predictionsProbaFile, 'wt') as fout_proba:
+        with gzip.open(predictionsFile, 'wt') as fout:
             chunksize = 10 ** 5
-            columns_s = [str(i) for i in np.arange(1, 73)]
-            maxValues = {str(k): v for k, v in eval(open(fileMax, "r").read()).items()}
-            minValues = {str(k): v for k, v in eval(open(fileMin, "r").read()).items()}
-            for chunk in pd.read_csv(csvData, chunksize=chunksize, names=columns_s, sep='\t', decimal='.', index_col=False):
-                chunk['63']=chunk['64']
-                chunk['64']=np.where(chunk['70'].str.contains('-1'), 0, 1)
-                x = chunk.iloc[:, 0:64]
-                x = pd.merge(x, feature_65, on=['63'])
-                xf = prepareDataNormalized(x, maxValues, minValues)
-
-                X = xf.values #xf[[32,34,36,61,62]].values
-                print('predict')
-                print(xf.columns)
-                print("Chunk : ", cont)
+            columns_s = [str(i) for i in np.arange(1, 74)]
+            #maxValues = {str(k): v for k, v in eval(open(fileMax, "r").read()).items()}
+            #minValues = {str(k): v for k, v in eval(open(fileMin, "r").read()).items()}
+            for chunk in pd.read_csv(csvData, chunksize=chunksize, names=columns_s, sep='\t', decimal='.', index_col=False, compression='gzip'):
+                print('len features: ', len(features[:-1]))
+                X = chunk[features[:-1]]
                 predictions = model.predict(X)
                 predictions_proba = model.predict_proba(X)
                 predictions = predictions.astype('str')
@@ -268,21 +215,22 @@ def getStd(csvData, sumFile, sep, decimalPoint, n):
 def getMinMaxSumTotal(file, sep, decimalPoint):
     chunksize = 10 ** 5
     columns_s = [str(i) for i in np.arange(1, 73)]
-    min = {n: 0 for n in range(2, 65)}
-    max = {n: 0 for n in range(2, 65)}
-    sum = {n: 0 for n in range(2, 65)}
+    min = {n: 0 for n in range(2, 66)}
+    max = {n: 0 for n in range(2, 66)}
+    sum = {n: 0 for n in range(2, 66)}
     cont=1
     for chunk in pd.read_csv(file, chunksize=chunksize, names=columns_s,
                                  sep=sep, decimal=decimalPoint, index_col=False):
         print("Chunk : ", cont)
 
         x = chunk.iloc[:, 0:64]
-
+        print("Data")
+        print(x.head(2))
         # r1 features that can be normalized
         xf=prepareData(x)
         frameSum=xf.sum()
-        print("Data")
-        print(xf.columns)
+
+
 
         for k, v in sum.items():
             sum[k]=v+frameSum.get(k,0)
@@ -302,17 +250,14 @@ def getMinMaxSumTotal(file, sep, decimalPoint):
                     min[k] = newv
         print("min: ", min)
         cont += 1
-    for ind in [21,22,23,38,63,43,44]:
-        del min[ind]
-        del max[ind]
 
-    foutf = open('min.txt', 'w')
+    foutf = open('minFinal.txt', 'w')
     foutf.write(str(min))
     foutf.close()
-    foutf = open('max.txt', 'w')
+    foutf = open('maxFinal.txt', 'w')
     foutf.write(str(max))
     foutf.close()
-    foutf = open('sum.txt', 'w')
+    foutf = open('sumFinal.txt', 'w')
     foutf.write(str(sum))
     foutf.close()
     return min, max
@@ -324,7 +269,7 @@ def getMinMaxSum(file, sep, decimalPoint):
     min = {n: 0 for n in range(2, 65)}
     max = {n: 0 for n in range(2, 65)}
     sum = {n: 0 for n in range(2, 65)}
-    for ind in [21,22,23,38,63,43,44]:
+    for ind in [21,22,23,38,43,44]:
         del min[ind]
         del max[ind]
         del sum[ind]
@@ -333,8 +278,6 @@ def getMinMaxSum(file, sep, decimalPoint):
     cont=1
     for chunk in pd.read_csv(file, chunksize=chunksize, names=columns_s,
                                  sep=sep, decimal=decimalPoint, index_col=False):
-        print("Chunk : ", cont)
-
         x = chunk.iloc[:, 0:64]
 
         # r1 features that can be normalized
@@ -381,27 +324,22 @@ def getMinMaxSum(file, sep, decimalPoint):
 if __name__ == '__main__':
 
     args = sys.argv[1:]
-    option='1'#args[0]
+    option=args[0]
     if option == '0':
-        dataFile = args[1]  # '../features_cluster/featuresClusterTest'
+        dataFile = args[1]
         getMinMaxSumTotal(dataFile, "\t", ".")
-        print('sum total ok')
     if option=='1':
-        #trainingFile=args[1] #'../features_cluster/finalFeatures.csv'
-        dataFile='../files/test.csv'#args[2]#'../features_cluster/featuresClusterTest'
-        modelFile='../files/trainedModelRF.sav'#args[3]
-        #cl3 = RandomForestClassifier(max_depth=10)
-        #trainingFinalModel(trainingFile, cl3)
-        print('model trainded')
-        predictData(modelFile,dataFile,'max.txt', 'min.txt')
+        dataFile=args[1]
+        modelFile=args[2]
+        predictionsFile=args[3]
+        predictionsProbaFile=args[4]
+        predictData(modelFile,dataFile, predictionsFile, predictionsProbaFile)
     else:
         if option=='2':
-            dataFile = args[1]#'../features_cluster/featuresClusterTest'
-            getMinMaxSum(dataFile, "\t",".")
-            print('sum ok')
+            dataFile = args[1]
+            getMinMaxSumTotal(dataFile, "\t",".")
 
         if option=='3':
-            dataFile = args[1]#'../features_cluster/featuresClusterTest'#
+            dataFile = args[1]
             sumFile="sumN.txt"
             getStd(dataFile, sumFile,"\t",".",args[2])
-            print('std ok')

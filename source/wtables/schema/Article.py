@@ -33,6 +33,9 @@ class Table(object):
         self.articleId=None
         self.articleTitle=None
         self.articlePath=None
+        self.articleClass=None
+        self.articleEntity = None
+        self.columnsClasses={}
 
     def setArticleId(self, articleId):
         self.articleId=articleId
@@ -42,6 +45,9 @@ class Table(object):
 
     def setArticlePath(self, articlePath):
         self.articlePath=articlePath
+
+    def setArticleEntity(self, articleEntity):
+        self.articleEntity=articleEntity
 
     def setStartRows(self, startRows):
         self.startRows=startRows
@@ -92,14 +98,23 @@ class Table(object):
                 tag.attrs = {}
         return str(soupTag)
 
+    def setArticleClass(self, articleClass):
+        self.articleClass=articleClass
+
     def setHTMLMatrix(self, htmlMatrix):
         self.htmlMatrix=htmlMatrix
+
+    def setColumnClasses(self, columnClasses):
+        self.columnClasses=columnClasses
 
     def reprJSON(self):
         return dict(tableId=self.tableId, title=self.title, htmlMatrix=self.htmlMatrix, startRows=self.startRows,
                     colHeaders=self.colHeaders, rowHeaders=self.rowHeaders, nrows=self.nrows, ncols=self.ncols, html=self.html,
                     tableType=self.tableType, articleTitle=self.articleTitle, articleId=self.articleId,
-                    attrs=self.attrs, articlePath=self.articlePath)
+                    attrs=self.attrs, articlePath=self.articlePath, articleEntity=self.articleEntity, articleClass=self.articleClass,
+                    columnClasses=self.columnClasses)
+
+
 
 def cleanCell(text):
     whitelist = ['a', 'abbr', 'img']
@@ -154,4 +169,10 @@ class ComplexDecoderTable(object):
             table2d.setArticleTitle(obj.get("articleTitle"))
             table2d.setArticlePath(obj.get("articlePath"))
 
+            if obj.get("articleClass") is not None:
+                table2d.setArticleClass(obj.get("articleClass"))
+            if obj.get("articleEntity") is not None:
+                table2d.setArticleEntity(obj.get("articleEntity"))
+            if obj.get("columnClasses") is not None:
+                table2d.setColumnClasses(obj.get("columnClasses"))
             return table2d

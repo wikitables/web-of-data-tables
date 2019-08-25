@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from urllib.parse import quote
 import urllib
-import requests
+#import requests
 import sys
 import os
 from wtables.utils import Pipey
@@ -66,7 +66,7 @@ def getRedirectLink(link):
     }
 
     #headers = {'content-type': 'application/json', 'Accept-Charset': 'UTF-8'}
-    sessionR = requests.Session()
+    sessionR = None#requests.Session()
     response = sessionR.get(
         url='https://en.wikipedia.org/w/api.php?',
         params=PARAMS)

@@ -1,20 +1,15 @@
-from wtables.schema.Article import *
-import os
+import traceback
 
 from wtables.features_cluster.FeaturesCluster import FeaturesCluster
-from wtables.features_cluster.RelationCell import RelationCell
-from wtables.features_cluster.Resource import Resource
 from wtables.features_cluster.FeaturesTableCell import TableCell
 from wtables.features_cluster.FeaturesTriple import TripleFeatures
+from wtables.features_cluster.RelationCell import RelationCell
 from wtables.preprocessing import ReadHTML as readHTML
 from wtables.preprocessing.TextProcessing import TextProcessing
 from wtables.schema.Article import *
-from wtables.wikidata_db.ConfigProperties import ConfigProperties
+from wtables.schema.Resource import Resource
 from wtables.wikidata_db.WikidataDAO import *
-import traceback
-import random
-import gc
-from bs4 import Tag
+
 
 def extractTableFile(tableId):
     #Read tables from main directory
@@ -121,7 +116,7 @@ def extractTableResources(table):
                 if cell2==None:
                     continue
                 res2 = cell2.resources
-                if len(res2)>0:
+                if len(res2)==1:
                     relation = RelationCell(cell1, cell2)
                     if relations.get(key) == None:
                         relations[key] = [relation]
@@ -153,7 +148,7 @@ def extractTableResources(table):
                     continue
                 res1=cell1.resources
                 res2=cell2.resources
-                if len(res1)>0 or len(res2)>0:
+                if len(res1)==1 or len(res2)==1:
                     relation=RelationCell(cell1, cell2)
                     if relations.get(key)==None:
                         relations[key]=[relation]
@@ -364,13 +359,14 @@ def getColTableFeatures(relationsByCols, dictFeatures):
 
 def getColNameFeatures(predicate, colName1, colName2, dictFeatures):
     #Extract column name features, specifically text simmilarity between column names and predicate
-    _colName1 = colName1.split("__")
+    """_colName1 = colName1.split("__")
     if len(_colName1) > 1:
         _colName1 = _colName1[1]
     else:
         _colName1=_colName1[0]
     _colName1 = _colName1.split("@")[0].replace("_", " ")
     _colName1 = _colName1.replace("**"," ")
+
     _colName2 = colName2.split("__")
     if len(_colName2) > 1:
         _colName2 = _colName2[1]
@@ -384,11 +380,11 @@ def getColNameFeatures(predicate, colName1, colName2, dictFeatures):
         _predicate="None"
     else:
         _predicate = predicate
-    predName=_predicate.split("@")[0]
+    predName=_predicate.split("@")[0]"""
     #print("names:, ", _colName1, predName)
     #print("names2:, ", _colName2, predName)
-    simm1 = textProcessing.textSimilarity(_colName1, predName)
-    simm2 = textProcessing.textSimilarity(_colName2, predName)
+    simm1 = textProcessing.textSimilarity(colName1, predicate)
+    simm2 = textProcessing.textSimilarity(colName2, predicate)
 
     # (28&29) string sim. for pred and s&o header
     dictFeatures[28] = simm1
@@ -539,6 +535,8 @@ def getClusterFeatures(featuresCluster, relations):
             for obj, preds in objs.items():
                 if subj!=obj:
                     featuresCluster.addRelations([(subj, obj)])
+                    if len(preds)>0:
+                        featuresCluster.addRelationsWithPredicate(1)
                     for pred in preds:
                         featuresCluster.addRelationsByProperty(pred,[(subj,obj)])
                         if row==0 or pred not in rowsByPred:
@@ -589,7 +587,7 @@ def extractFeatures(tables):
                 featuresCluster=dictFeaturesCluster.get(cols)
                 if featuresCluster==None:
                     featuresCluster=FeaturesCluster(cols)
-                print("cooolsss: ", cols)
+                #print("cooolsss: ", cols)
                 getClusterFeatures(featuresCluster, relations)
                 #UPDATE CLUSTER FEATURES
                 dictFeaturesCluster[cols]=featuresCluster
@@ -622,6 +620,7 @@ def getTriplesCluster(tables):
     out=""
     keyst=list(relationsByTables.keys())
     for table in keyst:
+        numberTables=len(keyst)
 
         relationsTable=relationsByTables.get(table)
         dictFeatures = {i: 0 for i in range(1, 55)}
@@ -674,6 +673,13 @@ def getTriplesCluster(tables):
                         allFeatures[60] = totalRows
                         allFeatures[61] = allFeatures[58]/allFeatures[56]
                         allFeatures[62] = allFeatures[59]/totalRows
+                        allFeatures[63] = allFeatures[57] / allFeatures[55]
+                        if "-1" in pred.propName:
+                            allFeatures[64]=1
+                        else:
+                            allFeatures[64] = 1
+                        allFeatures[65]=numberTables
+
 
 
                         #objectsBySubj = wikidataDAO.getObjBySubjProp(t.subj.id, pred.propId)
@@ -684,7 +690,7 @@ def getTriplesCluster(tables):
 
                         out += outf + cluster + "\t" + t.tableId + "\t" + t.pos + "\t" + cell1.colName + "\t" + cell2.colName + "\t" + t.subj.toString() + "\t" + pred.propId + " :" + pred.propName + "\t" + \
                             t.obj.toString() + "\n"
-                        #fileout.write(
+                        #fout.write(
                         #   outf + cluster + "\t" + t.tableId + "\t" + t.pos + "\t" + cell1.colName + "\t" + cell2.colName + "\t" + t.subj.toString() + "\t" + pred.propId + " :" + pred.propName + "\t" + \
                         #    t.obj.toString() + "\n")
 
@@ -703,6 +709,7 @@ def getTriplesCluster(tables):
                         dictFeatures[38] = 0
                         dictFeatures[39] = domain
                         dictFeatures[40] = rangeC
+
                         featuresCluster = dictClusterFeaturesByCols.get(cols).get(pred.propId)
                         allFeatures = dictFeatures.copy()
                         allFeatures.update(featuresCluster)
@@ -714,14 +721,20 @@ def getTriplesCluster(tables):
                         allFeatures[60] = totalRows
                         allFeatures[61] = allFeatures[58] / allFeatures[56]
                         allFeatures[62] = allFeatures[59] / totalRows
+                        allFeatures[63] = allFeatures[57] / allFeatures[55]
+                        if "-1" in predId:
+                            allFeatures[64]=1
+                        else:
+                            allFeatures[64] = 1
+                        allFeatures[65]=numberTables
                         outf = ""
                         for k in sorted(list(allFeatures.keys())):
                             outf += str(k) + ":" + str(allFeatures.get(k)) + "\t"
                         out += outf + cluster + "\t" + t.tableId + "\t" + t.pos + "\t" + cell1.colName + "\t" + cell2.colName + "\t" + t.subj.toString() + "\t" + pred.propId + " :" + pred.propName + "\t" + \
                                t.obj.toString() + "\n"
-                        #fileout.write(
+                        #fout.write(
                         #    outf + cluster + "\t" + t.tableId + "\t" + t.pos + "\t" + cell1.colName + "\t" + cell2.colName + "\t" + t.subj.toString() + "\t" + pred.propId + " :" + pred.propName + "\t" + \
-                        #    t.obj.toString() + "\n")
+                         #   t.obj.toString() + "\n")
 
                     for predId in clusterPreds:
                         pred = wikidataDAO.getWikidataProp(predId)
@@ -749,14 +762,19 @@ def getTriplesCluster(tables):
                         allFeatures[60] = totalRows
                         allFeatures[61] = allFeatures[58] / allFeatures[56]
                         allFeatures[62] = allFeatures[59] / totalRows
-
+                        allFeatures[63] = allFeatures[57] / allFeatures[55]
+                        if "-1" in predId:
+                            allFeatures[64]=1
+                        else:
+                            allFeatures[64] = 1
+                        allFeatures[65]=numberTables
                         outf=""
                         for k in sorted(list(allFeatures.keys())):
                             outf += str(k) + ":" + str(allFeatures.get(k)) + "\t"
 
                         out += outf + cluster + "\t" + t.tableId + "\t" + t.pos + "\t" + cell1.colName + "\t" + cell2.colName + "\t" + t.subj.toString() + "\t" + pred.propId + " :" + pred.propName + "\t" + \
                                    t.obj.toString() + "\n"
-                        #fileout.write(
+                        #fout.write(
                         #    outf + cluster + "\t" + t.tableId + "\t" + t.pos + "\t" + cell1.colName + "\t" + cell2.colName + "\t" + t.subj.toString() + "\t" + pred.propId + " :" + pred.propName + "\t" + \
                         #    t.obj.toString() + "\n")
         del relationsByTables[table]
@@ -766,7 +784,7 @@ def getTriplesCluster(tables):
     del predsByTables
     del dictClusterFeaturesByCols
     del dictClusterPropertyByCols
-    gc.collect()
+    #gc.collect()
     return out
 
 def process(input=0):
@@ -779,13 +797,14 @@ def process(input=0):
     with gzip.open(FILE_OUTPUT, "wt") as fout:
         with gzip.open(FILE_CLUSTER, "rt") as fi:
             for line in fi:
+                print("Line cluster: ", cont)
                 if cont==0:
                     cont+=1
                     continue
                 cont+=1
                 _line=line.replace("\n","").split("\t")
 
-                if int(_line[0])>=38739: # and int(_line[0])<=600000:
+                if int(_line[0])>=3000: # and int(_line[0])<=600000:
                     if cluster!=_line[0] and cluster!='':
                         #getTriplesCluster(clustert, fout)
 
@@ -826,8 +845,8 @@ if __name__ == '__main__':
     FOLDER_JSON_FILES = "/home/jluzuria/tablesJson"  # params.get("json_files")
     wikidataDAO = WikidataDAO(params)
     wikidataDAO.fillData()
-    wikidataDAO.fillDomainRange()
-    wikidataDAO.fillSubjObjCount()
+    #wikidataDAO.fillDomainRange()
+    #wikidataDAO.fillSubjObjCount()
     textProcessing = TextProcessing()
     FILE_CLUSTER=args[0]
     FILE_OUTPUT=args[1]
@@ -835,6 +854,6 @@ if __name__ == '__main__':
     #process()
     pipeline = Pipey.Pipeline()
     pipeline.add(process)
-    pipeline.add(processClusters, 8)
+    pipeline.add(processClusters, 4)
     pipeline.add(ResultCombiner(FILE_OUTPUT))
     pipeline.run(100)

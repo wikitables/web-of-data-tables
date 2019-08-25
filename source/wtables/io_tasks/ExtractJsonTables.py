@@ -99,7 +99,6 @@ def createTables(filename):
                     t2d.setArticleId(str(cont))
                     t2d.setArticleTitle(title)
                     t2d.setArticlePath(fileNamebz)
-
                     tables2d.append(t2d)
                     ft = open(os.path.join(FOLDER_TABLES_OUT,str(tableId.replace(".","_")) + ".json"), "w")
                     ft.write(json.dumps(t2d.reprJSON(), cls=ComplexEncoder, skipkeys=True))
@@ -158,13 +157,13 @@ def processDocuments(file):
 if __name__ == '__main__':
     args = sys.argv[1:]
     params = ConfigProperties().loadProperties()
-    FOLDER_HTML_FILES ="/home/jhomara/Desktop" #params.get("html_files")
+    FOLDER_HTML_FILES ="/home/jluzuria/infoboxes_html" #params.get("html_files")
     textProcessing=TextProcessing()
     #if len(args)<2:
     #    print("Use <folderArticlesOut> <folderTablesOut> <fileStatsOut>")
     #else:
-    FOLDER_OUT="/home/jhomara/Desktop/prueba" #args[0]
-    FOLDER_TABLES_OUT="/home/jhomara/Desktop/prueba/prueba1"#args[1]
+    FOLDER_OUT=args[0]
+    FOLDER_TABLES_OUT=args[1]
     logging.basicConfig(filename="./debug.log", level=logging.DEBUG)
     pipeline = Pipey.Pipeline()
     # one process reads the documents
@@ -172,5 +171,5 @@ if __name__ == '__main__':
     # up to 8 processes transform the documents
     pipeline.add(processDocuments, 8)
     # One process combines the results into a file.
-    pipeline.add(ResultCombiner("out.out"))
+    pipeline.add(ResultCombiner(args[2]))
     pipeline.run(100)
